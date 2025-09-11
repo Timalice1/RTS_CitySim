@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
-#include "SaveGame/SaveableInterface.h"
 #include "RTS_GameState.generated.h"
 
 /**
@@ -15,4 +14,6 @@ class RTS_API ARTS_GameState : public AGameStateBase
 
 public:
 	virtual void BeginPlay() override;
+
+	
 };
