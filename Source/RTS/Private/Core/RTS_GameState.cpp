@@ -6,5 +6,4 @@
 void ARTS_GameState::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
