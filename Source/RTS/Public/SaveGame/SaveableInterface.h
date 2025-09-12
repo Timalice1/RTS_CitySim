@@ -17,10 +17,7 @@ class RTS_API ISaveableInterface
 
 public:
 	/// Serialize object-specific data
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = Saveable)
-	void SaveObjectData();
-	
+	virtual void SaveObjectData(FArchive &Ar) = 0;
 	/// Load object-specific data
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = Saveable)
-	void LoadObjectData();
+	virtual void LoadObjectData(FArchive &Ar) = 0;
 };

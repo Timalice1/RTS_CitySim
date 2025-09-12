@@ -22,8 +22,8 @@ public:
 	virtual void SetRoadMesh(class UStaticMesh* InMesh);
 	virtual void AddInstance(const FVector& Location, const FRotator& Rotation);
 
-	virtual void SaveObjectData_Implementation() override;
-	virtual void LoadObjectData_Implementation() override;
+	virtual void SaveObjectData(FArchive& Ar) override;
+	virtual void LoadObjectData(FArchive& Ar) override;
 };
 
 

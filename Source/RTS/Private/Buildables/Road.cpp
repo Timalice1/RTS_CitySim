@@ -26,18 +26,26 @@ void ARoad::AddInstance(const FVector& Location, const FRotator& Rotation)
 	ISM->AddInstance(FTransform(Rotation, Location), true);
 }
 
-void ARoad::SaveObjectData_Implementation()
+void ARoad::SaveObjectData(FArchive& Ar)
 {
+	TArray<FTransform> instances;
+	for (int32 i = 0; i < ISM->GetInstanceCount(); ++i)
+		ISM->GetInstanceTransform(i, instances.Add_GetRef(FTransform()), true);
+	Ar << instances;
+
 #if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, FString::Printf(TEXT("%s - data saved"), *GetName()));
+	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("%s - %d instances saved"), *GetName(), instances.Num()));
 #endif
 }
 
-void ARoad::LoadObjectData_Implementation()
+void ARoad::LoadObjectData(FArchive& Ar)
 {
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, FString::Printf(TEXT("%s - data loaded"), *GetName()));
-#endif
+	TArray<FTransform> instances;
+	Ar << instances;
+
+	ISM->ClearInstances();
+	for (FTransform &transform : instances)
+		AddInstance(transform.GetLocation(), transform.Rotator());
 }
 
 ARoad_Preview::ARoad_Preview()

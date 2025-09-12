@@ -24,59 +24,48 @@ void ARTS_GameState::BeginPlay()
 void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 {
 	if (!SaveGameObject)
-	{
-		UE_LOG(LogRTSGameState, Error, TEXT("OnSaveGameRequested: Game save object is NULL"))
 		return;
-	}
 
 	SaveGameObject->ActorSaveRecords.Empty();
-
 	for (FActorIterator It(WorldContext); It; ++It)
 	{
 		AActor* actor = *It;
-		// Skip actors that are not saveable
-		if (!actor->Implements<USaveableInterface>())
-			continue;
+		if (ISaveableInterface* saveable = Cast<ISaveableInterface>(actor))
+		{
+			FActorSaveDataRecord saveRecord;
+			saveRecord.ActorClass = actor->GetClass();
+			saveRecord.ActorName = actor->GetName();
+			saveRecord.ActorTransform = actor->GetActorTransform();
 
-		FActorSaveDataRecord saveRecord;
-		saveRecord.ActorName = actor->GetName();
-		saveRecord.ActorClass = actor->GetClass();
-		saveRecord.ActorTransform = actor->GetActorTransform();
+			FMemoryWriter MemWriter(saveRecord.ByteData);
+			FObjectAndNameAsStringProxyArchive Ar(MemWriter, true);
+			Ar.ArIsSaveGame = true;
 
-		FMemoryWriter MemWriter(saveRecord.ByteData);
-		FObjectAndNameAsStringProxyArchive Ar(MemWriter, true);
-		Ar.ArIsSaveGame = true; // Serialize only properties that are marked as SaveGame
-
-		// Save actor-specific data
-		ISaveableInterface::Execute_SaveObjectData(actor);
-
-		// Serialize actor
-		actor->Serialize(Ar);
-
-		// Add new save record to save game object
-		SaveGameObject->ActorSaveRecords.Add(saveRecord);
+			saveable->SaveObjectData(Ar);
+			actor->Serialize(Ar);
+			SaveGameObject->ActorSaveRecords.Add(saveRecord);
+		}
 	}
 }
 
 void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 {
 	if (!SaveGameObject)
-	{
-		UE_LOG(LogRTSGameState, Error, TEXT("OnSaveGameLoaded: Game save object is NULL"))
 		return;
-	}
 
-	for (FActorSaveDataRecord& actorSaveRecord : SaveGameObject->ActorSaveRecords)
+	for (FActorSaveDataRecord& saveRecord : SaveGameObject->ActorSaveRecords)
 	{
-		if (AActor* actor = WorldContext->SpawnActor<AActor>(actorSaveRecord.ActorClass, actorSaveRecord.ActorTransform))
+		if (AActor* actor = WorldContext->SpawnActor<AActor>(saveRecord.ActorClass, saveRecord.ActorTransform))
 		{
-			FMemoryReader MemReader(actorSaveRecord.ByteData);
-			FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
-			Ar.ArIsSaveGame = true;
+			if (ISaveableInterface* saveable = Cast<ISaveableInterface>(actor))
+			{
+				FMemoryReader MemReader(saveRecord.ByteData);
+				FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
+				Ar.ArIsSaveGame = true;
 
-			ISaveableInterface::Execute_LoadObjectData(actor);
-
-			actor->Serialize(Ar);
+				saveable->LoadObjectData(Ar);
+				actor->Serialize(Ar);
+			}
 		}
 	}
 }
