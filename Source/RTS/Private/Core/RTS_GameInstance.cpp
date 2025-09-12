@@ -17,10 +17,6 @@ void URTS_GameInstance::Request_SaveGame(const FString& toSlot)
 	if (!DefaultSaveGameObject)
 		return;
 
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("GameInstance -> SaveGameRequested")));
-#endif
-
 	OnSaveGameRequested.Broadcast(DefaultSaveGameObject);
 
 	FAsyncSaveGameToSlotDelegate save_Delegate;
@@ -53,5 +49,10 @@ void URTS_GameInstance::HandleGameLoaded(const FString& SlotName, int UserIndex,
 void URTS_GameInstance::HandleGameSaved(const FString& SlotName, int UserIndex, bool bSuccess)
 {
 	if (bSuccess)
+	{
+#if WITH_EDITOR
+		GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("GameSaved!!")));
+#endif
 		OnGameSaved.Broadcast();
+	}
 }

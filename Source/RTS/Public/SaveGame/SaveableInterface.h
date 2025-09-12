@@ -16,8 +16,11 @@ class RTS_API ISaveableInterface
 	GENERATED_BODY()
 
 public:
-	// Serialize object-specific data
-	virtual void SaveObjectData() = 0;
-	// Load object-specific data
-	virtual void LoadObjectData() = 0;
+	/// Serialize object-specific data
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = Saveable)
+	void SaveObjectData();
+	
+	/// Load object-specific data
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = Saveable)
+	void LoadObjectData();
 };

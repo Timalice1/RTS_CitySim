@@ -26,6 +26,20 @@ void ARoad::AddInstance(const FVector& Location, const FRotator& Rotation)
 	ISM->AddInstance(FTransform(Rotation, Location), true);
 }
 
+void ARoad::SaveObjectData_Implementation()
+{
+#if WITH_EDITOR
+	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, FString::Printf(TEXT("%s - data saved"), *GetName()));
+#endif
+}
+
+void ARoad::LoadObjectData_Implementation()
+{
+#if WITH_EDITOR
+	GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, FString::Printf(TEXT("%s - data loaded"), *GetName()));
+#endif
+}
+
 ARoad_Preview::ARoad_Preview()
 {
 	PrimaryActorTick.bCanEverTick = false;

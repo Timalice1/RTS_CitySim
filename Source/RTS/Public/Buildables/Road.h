@@ -2,10 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "SaveGame/SaveableInterface.h"
 #include "Road.generated.h"
 
 UCLASS(Abstract)
-class RTS_API ARoad : public AActor
+class RTS_API ARoad : public AActor, public ISaveableInterface
 {
 	GENERATED_BODY()
 
@@ -20,6 +21,9 @@ protected:
 public:
 	virtual void SetRoadMesh(class UStaticMesh* InMesh);
 	virtual void AddInstance(const FVector& Location, const FRotator& Rotation);
+
+	virtual void SaveObjectData_Implementation() override;
+	virtual void LoadObjectData_Implementation() override;
 };
 
 
