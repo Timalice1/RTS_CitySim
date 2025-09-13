@@ -4,7 +4,6 @@
 #include "SaveGame/RTS_SaveGame.h"
 #include "SaveGame/SaveableInterface.h"
 #include "SaveGame/SaveGameSubsystem.h"
-#include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 DEFINE_LOG_CATEGORY(LogRTSGameState);
 
@@ -26,27 +25,26 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 	if (!SaveGameObject)
 		return;
 
+#if WITH_EDITOR
+	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("SaveGameRequested")));
+#endif
+
+	
 	SaveGameObject->WorldActorsRecords.Empty();
 	for (FActorIterator It(WorldContext); It; ++It)
 	{
 		AActor* actor = *It;
-		if (ISaveableInterface* saveable = Cast<ISaveableInterface>(actor))
-		{
-			FActorSaveDataRecord saveRecord;
-			saveRecord.ActorClass = actor->GetClass();
-			saveRecord.ActorName = actor->GetName();
-			saveRecord.ActorTransform = actor->GetActorTransform();
+		if (!actor || !actor->Implements<USaveableInterface>())
+			continue;
 
-			FMemoryWriter MemWriter(saveRecord.ByteData);
-			FObjectAndNameAsStringProxyArchive Ar(MemWriter, true);
-			Ar.ArIsSaveGame = true;
+		FActorSaveDataRecord saveRecord;
+		saveRecord.ActorClass = actor->GetClass();
+		saveRecord.ActorName = actor->GetName();
+		saveRecord.ActorTransform = actor->GetActorTransform();
+		saveRecord.ByteData = GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->SerializeObject(actor);
 
-			actor->Serialize(Ar);
-			saveable->SaveObjectData(Ar);
-			SaveGameObject->WorldActorsRecords.Add(saveRecord);
-
-			UE_LOG(LogRTSGameState, Warning, TEXT("SAVED: %s"), *actor->GetName())
-		}
+		SaveGameObject->WorldActorsRecords.Add(saveRecord);
+		UE_LOG(LogRTSGameState, Warning, TEXT("SAVED: %s"), *actor->GetName())
 	}
 }
 
@@ -55,15 +53,16 @@ void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 	if (!SaveGameObject)
 		return;
 
+#if WITH_EDITOR
+	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("GameLoaded")));
+#endif
+
 	// Remove all saveable actors that already on the scene
 	for (FActorIterator It(WorldContext); It; ++It)
 	{
-		if (AActor* actor = *It)
-		{
-			if (!actor->Implements<USaveableInterface>())
-				continue;
+		AActor* actor = *It;
+		if (actor && actor->Implements<USaveableInterface>())
 			actor->Destroy();
-		}
 	}
 
 	// Respawn saveable actors from game save
@@ -71,16 +70,8 @@ void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 	{
 		if (AActor* actor = WorldContext->SpawnActor<AActor>(saveRecord.ActorClass, saveRecord.ActorTransform))
 		{
-			if (ISaveableInterface* saveable = Cast<ISaveableInterface>(actor))
-			{
-				FMemoryReader MemReader(saveRecord.ByteData);
-				FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
-				Ar.ArIsSaveGame = true;
-				actor->Serialize(Ar);
-				saveable->LoadObjectData(Ar);
-
-				UE_LOG(LogGameState, Warning, TEXT("LOADED: %s"), *actor->GetName());
-			}
+			GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->DeserializeObject(actor, saveRecord.ByteData);
+			UE_LOG(LogGameState, Warning, TEXT("LOADED: %s"), *actor->GetName());
 		}
 	}
 }

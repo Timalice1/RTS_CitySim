@@ -17,8 +17,17 @@ class RTS_API USaveGameSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	virtual void Request_SaveGame(const FString& toSlot);
+
+	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	virtual void Request_LoadGame(const FString& fromSlot);
+
+	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
+	TArray<uint8> SerializeObject(UObject* Target);
+
+	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
+	void DeserializeObject(UObject* Target, TArray<uint8> bytes);
 
 	UPROPERTY(BlueprintAssignable, Category = Events)
 	FOnGameSavedDelegate OnGameSaved;
