@@ -1,9 +1,9 @@
 ﻿#include "Core/RTS_GameState.h"
 
 #include "EngineUtils.h"
-#include "Core/RTS_GameInstance.h"
 #include "SaveGame/RTS_SaveGame.h"
 #include "SaveGame/SaveableInterface.h"
+#include "SaveGame/SaveGameSubsystem.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 DEFINE_LOG_CATEGORY(LogRTSGameState);
@@ -14,10 +14,10 @@ void ARTS_GameState::BeginPlay()
 
 	verify((WorldContext = GetWorld()) != nullptr);
 
-	if (URTS_GameInstance* gi = Cast<URTS_GameInstance>(GetGameInstance()))
+	if (USaveGameSubsystem* sg_subsystem = GetGameInstance()->GetSubsystem<USaveGameSubsystem>())
 	{
-		gi->OnSaveGameRequested.AddDynamic(this, &ThisClass::OnSaveGameRequested);
-		gi->OnSaveLoaded.AddDynamic(this, &ThisClass::OnSaveGameLoaded);
+		sg_subsystem->OnSaveGameRequested.AddDynamic(this, &ThisClass::OnSaveGameRequested);
+		sg_subsystem->OnSaveLoaded.AddDynamic(this, &ThisClass::OnSaveGameLoaded);
 	}
 }
 
@@ -26,7 +26,7 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 	if (!SaveGameObject)
 		return;
 
-	SaveGameObject->ActorSaveRecords.Empty();
+	SaveGameObject->WorldActorsRecords.Empty();
 	for (FActorIterator It(WorldContext); It; ++It)
 	{
 		AActor* actor = *It;
@@ -41,9 +41,9 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 			FObjectAndNameAsStringProxyArchive Ar(MemWriter, true);
 			Ar.ArIsSaveGame = true;
 
-			saveable->SaveObjectData(Ar);
 			actor->Serialize(Ar);
-			SaveGameObject->ActorSaveRecords.Add(saveRecord);
+			saveable->SaveObjectData(Ar);
+			SaveGameObject->WorldActorsRecords.Add(saveRecord);
 
 			UE_LOG(LogRTSGameState, Warning, TEXT("SAVED: %s"), *actor->GetName())
 		}
@@ -67,7 +67,7 @@ void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 	}
 
 	// Respawn saveable actors from game save
-	for (FActorSaveDataRecord& saveRecord : SaveGameObject->ActorSaveRecords)
+	for (FActorSaveDataRecord& saveRecord : SaveGameObject->WorldActorsRecords)
 	{
 		if (AActor* actor = WorldContext->SpawnActor<AActor>(saveRecord.ActorClass, saveRecord.ActorTransform))
 		{
@@ -77,7 +77,6 @@ void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 				FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
 				Ar.ArIsSaveGame = true;
 				actor->Serialize(Ar);
-
 				saveable->LoadObjectData(Ar);
 
 				UE_LOG(LogGameState, Warning, TEXT("LOADED: %s"), *actor->GetName());

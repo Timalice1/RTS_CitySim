@@ -40,9 +40,8 @@ public:
 	virtual bool IsPlaceable() const { return bIsPlaceable; }
 
 	//~ Begin Saveable interface
-	virtual void SaveObjectData(FArchive& Ar) override {}
-
-	virtual void LoadObjectData(FArchive& Ar) override {}
+	virtual void SaveObjectData(FArchive& Ar) override;
+	virtual void LoadObjectData(FArchive& Ar) override;
 	//~ End saveable interface
 
 private: // Internal
@@ -50,6 +49,9 @@ private: // Internal
 	virtual void EndBuild();
 	// Updates build process - update mesh and progress
 	virtual void UpdateBuildingProgress();
+
+	virtual void InitMeshAndCollider();
+	virtual void ApplyOverlay();
 
 protected: // Components
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
@@ -69,11 +71,15 @@ private: // Internal data
 	UPROPERTY()
 	class UMaterialInstanceDynamic* _overlayMaterial = nullptr;
 
+	UPROPERTY(SaveGame)
 	FTimerHandle _buildTimer;
 
 	UPROPERTY(SaveGame)
 	float _buildProgress = 0.f;
-	float _buildRate = 1.f;
+	
+	UPROPERTY(SaveGame)
 	FBuildingData _buildingData;
+
+	float _buildRate = 3.f;
 	bool bIsPlaceable = true;
 };

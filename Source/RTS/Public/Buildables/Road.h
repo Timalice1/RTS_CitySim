@@ -22,8 +22,10 @@ public:
 	virtual void SetRoadMesh(class UStaticMesh* InMesh);
 	virtual void AddInstance(const FVector& Location, const FRotator& Rotation);
 
+	//~ Begin saveable interface
 	virtual void SaveObjectData(FArchive& Ar) override;
 	virtual void LoadObjectData(FArchive& Ar) override;
+	//~ End saveable interface
 };
 
 
@@ -35,7 +37,7 @@ class ARoad_Preview : public AActor
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
 	TObjectPtr<class UInstancedStaticMeshComponent> Preview_ISM = nullptr;
-	
+
 public:
 	ARoad_Preview();
 	virtual void AddPreviewInstance(const FVector& Location, const FRotator& Rotation, bool IsValid);

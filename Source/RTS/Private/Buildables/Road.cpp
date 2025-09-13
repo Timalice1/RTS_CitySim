@@ -43,7 +43,7 @@ void ARoad::LoadObjectData(FArchive& Ar)
 
 	// Spawn new instances
 	ISM->ClearInstances();
-	for (FTransform &transform : instances)
+	for (FTransform& transform : instances)
 		AddInstance(transform.GetLocation(), transform.Rotator());
 }
 

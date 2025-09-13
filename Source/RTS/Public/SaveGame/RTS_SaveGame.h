@@ -31,5 +31,5 @@ class RTS_API URTS_SaveGame : public USaveGame
 
 public:
 	UPROPERTY()
-	TArray<FActorSaveDataRecord> ActorSaveRecords;
+	TArray<FActorSaveDataRecord> WorldActorsRecords;
 };

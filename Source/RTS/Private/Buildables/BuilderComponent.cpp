@@ -94,20 +94,17 @@ void UBuilderComponent::BuildDeploy()
 {
 	if (BuildPreviewActor && BuildPreviewActor->IsPlaceable())
 	{
-		if (TSubclassOf<ARTS_BuildPreview> previewClass = BuildPreview_Class.LoadSynchronous())
+		if (ARTS_BuildPreview* build = WorldContext->SpawnActor<ARTS_BuildPreview>(
+			BuildPreview_Class.LoadSynchronous(),
+			BuildPreviewActor->GetActorLocation() - FVector::UpVector * PreviewBuildFloatHeight,
+			BuildPreviewActor->GetActorRotation()))
 		{
-			if (ARTS_BuildPreview* build = WorldContext->SpawnActor<ARTS_BuildPreview>(
-				previewClass, BuildPreviewActor->GetActorLocation() - FVector::UpVector * PreviewBuildFloatHeight, BuildPreviewActor->GetActorRotation()))
-			{
-				build->InitBuilding(BuildPreviewActor->GetBuildingData());
-				build->OnBuildCompleted.AddDynamic(this, &ThisClass::HandleBuildCompleted);
-				build->StartBuild();
-			}
-			else
-				UE_LOG(LogBuilderComponent, Warning, TEXT("BuildDeploy: Failed to spawn preview building"));
+			build->InitBuilding(BuildPreviewActor->GetBuildingData());
+			build->OnBuildCompleted.AddDynamic(this, &ThisClass::HandleBuildCompleted);
+			build->StartBuild();
 		}
 		else
-			UE_LOG(LogBuilderComponent, Warning, TEXT("BuildDeploy: Failed to load build preview actor class"));
+			UE_LOG(LogBuilderComponent, Warning, TEXT("BuildDeploy: Failed to spawn preview building"));
 	}
 
 	ExitBuildMode();

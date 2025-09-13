@@ -2,6 +2,7 @@
 #include "Buildables/BuildingData.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Materials/MaterialInstance.h"
 
@@ -25,18 +26,18 @@ ARTS_BuildPreview::ARTS_BuildPreview()
 void ARTS_BuildPreview::InitBuilding(const FBuildingData& BuildingData)
 {
 	_buildingData = BuildingData;
+	InitMeshAndCollider();
+	ApplyOverlay();
+}
+
+void ARTS_BuildPreview::InitMeshAndCollider()
+{
+	if (!BuildingMesh || !BoxCollider)
+		return;
 
 	if (UStaticMesh* meshComplete = _buildingData.BuildingMesh_Complete.LoadSynchronous())
 	{
 		BuildingMesh->SetStaticMesh(meshComplete);
-
-		// Create and apply dynamic overlay material instance
-		if (UMaterialInstance* overlay = OverlayPreviewMaterial.LoadSynchronous())
-		{
-			_overlayMaterial = UMaterialInstanceDynamic::Create(overlay, this);
-			if (_overlayMaterial)
-				BuildingMesh->SetOverlayMaterial(_overlayMaterial);
-		}
 
 		// Init collider size
 		FVector Min, Max;
@@ -45,13 +46,24 @@ void ARTS_BuildPreview::InitBuilding(const FBuildingData& BuildingData)
 		// Building size adjustment to match world grid parameters
 		// BuildingSize = MeshBounds + (CellSize - (MeshBounds % CellSize));
 		FVector targetSize = Max;
-		const uint32 CellSize = BuildingData.CellSize;
+		const uint32 CellSize = _buildingData.CellSize;
 		if ((static_cast<int>(Max.X) % CellSize != 0) && (static_cast<int>(Max.Y) % CellSize != 0))
 		{
 			targetSize.X = Max.X + (CellSize - static_cast<int>(Max.X) % CellSize);
 			targetSize.Y = Max.Y + (CellSize - static_cast<int>(Max.Y) % CellSize);
 		}
 		BoxCollider->SetBoxExtent(targetSize);
+	}
+}
+
+void ARTS_BuildPreview::ApplyOverlay()
+{
+	// Create and apply dynamic overlay material instance
+	if (UMaterialInstance* overlay = OverlayPreviewMaterial.LoadSynchronous())
+	{
+		_overlayMaterial = UMaterialInstanceDynamic::Create(overlay, this);
+		if (_overlayMaterial)
+			BuildingMesh->SetOverlayMaterial(_overlayMaterial);
 	}
 }
 
@@ -68,6 +80,9 @@ void ARTS_BuildPreview::StartBuild()
 
 void ARTS_BuildPreview::UpdateBuildingProgress()
 {
+	if (!BuildingMesh)
+		return;
+
 	if (_buildProgress >= 1)
 	{
 		if (UStaticMesh* completeMesh = _buildingData.BuildingMesh_Complete.LoadSynchronous())
@@ -82,10 +97,7 @@ void ARTS_BuildPreview::UpdateBuildingProgress()
 			if (UStaticMesh* progressMesh = _buildingData.BuildingMesh_Stages[progressMeshIndex].LoadSynchronous())
 				BuildingMesh->SetStaticMesh(progressMesh);
 		}
-		UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1500.f,
-		                                      FString::Printf(TEXT("Progress: [%.2f]"), _buildProgress), NULL, FLinearColor::Red, _buildProgress);
 	}
-
 	_buildProgress += 1.f / _buildingData.BuildingMesh_Stages.Num();
 }
 
@@ -98,8 +110,19 @@ void ARTS_BuildPreview::ValidatePlacement()
 		_overlayMaterial->SetScalarParameterValue(TEXT("Status"), bIsPlaceable ? 1.f : 0.f);
 }
 
+void ARTS_BuildPreview::SaveObjectData(FArchive& Ar) {}
+
+void ARTS_BuildPreview::LoadObjectData(FArchive& Ar)
+{
+	InitMeshAndCollider();
+	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, _buildRate, true, 0);
+}
+
 void ARTS_BuildPreview::EndBuild()
 {
+#if WITH_EDITOR
+	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Green, FString::Printf(TEXT("%s: Build finish"), *GetName()));
+#endif
 	GetWorld()->GetTimerManager().ClearTimer(_buildTimer);
 	OnBuildCompleted.Broadcast(this);
 }
