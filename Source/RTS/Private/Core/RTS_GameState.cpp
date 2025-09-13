@@ -44,6 +44,8 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 			saveable->SaveObjectData(Ar);
 			actor->Serialize(Ar);
 			SaveGameObject->ActorSaveRecords.Add(saveRecord);
+
+			UE_LOG(LogRTSGameState, Warning, TEXT("SAVED: %s"), *actor->GetName())
 		}
 	}
 }
@@ -53,6 +55,18 @@ void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 	if (!SaveGameObject)
 		return;
 
+	// Remove all saveable actors that already on the scene
+	for (FActorIterator It(WorldContext); It; ++It)
+	{
+		if (AActor* actor = *It)
+		{
+			if (!actor->Implements<USaveableInterface>())
+				continue;
+			actor->Destroy();
+		}
+	}
+
+	// Respawn saveable actors from game save
 	for (FActorSaveDataRecord& saveRecord : SaveGameObject->ActorSaveRecords)
 	{
 		if (AActor* actor = WorldContext->SpawnActor<AActor>(saveRecord.ActorClass, saveRecord.ActorTransform))
@@ -62,9 +76,11 @@ void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 				FMemoryReader MemReader(saveRecord.ByteData);
 				FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
 				Ar.ArIsSaveGame = true;
+				actor->Serialize(Ar);
 
 				saveable->LoadObjectData(Ar);
-				actor->Serialize(Ar);
+
+				UE_LOG(LogGameState, Warning, TEXT("LOADED: %s"), *actor->GetName());
 			}
 		}
 	}

@@ -2,6 +2,7 @@
 #include "Buildables/BuildingData.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Materials/MaterialInstance.h"
 
 ARTS_BuildPreview::ARTS_BuildPreview()
@@ -81,6 +82,8 @@ void ARTS_BuildPreview::UpdateBuildingProgress()
 			if (UStaticMesh* progressMesh = _buildingData.BuildingMesh_Stages[progressMeshIndex].LoadSynchronous())
 				BuildingMesh->SetStaticMesh(progressMesh);
 		}
+		UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1500.f,
+		                                      FString::Printf(TEXT("Progress: [%.2f]"), _buildProgress), NULL, FLinearColor::Red, _buildProgress);
 	}
 
 	_buildProgress += 1.f / _buildingData.BuildingMesh_Stages.Num();

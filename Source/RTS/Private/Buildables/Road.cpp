@@ -28,21 +28,20 @@ void ARoad::AddInstance(const FVector& Location, const FRotator& Rotation)
 
 void ARoad::SaveObjectData(FArchive& Ar)
 {
+	// Serialize ISM instances transforms
 	TArray<FTransform> instances;
 	for (int32 i = 0; i < ISM->GetInstanceCount(); ++i)
 		ISM->GetInstanceTransform(i, instances.Add_GetRef(FTransform()), true);
 	Ar << instances;
-
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("%s - %d instances saved"), *GetName(), instances.Num()));
-#endif
 }
 
 void ARoad::LoadObjectData(FArchive& Ar)
 {
+	// Deserialize instances transforms
 	TArray<FTransform> instances;
 	Ar << instances;
 
+	// Spawn new instances
 	ISM->ClearInstances();
 	for (FTransform &transform : instances)
 		AddInstance(transform.GetLocation(), transform.Rotator());

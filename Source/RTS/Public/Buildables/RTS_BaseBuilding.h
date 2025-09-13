@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "SaveGame/SaveableInterface.h"
 #include "RTS_BaseBuilding.generated.h"
 
 /**
@@ -9,7 +10,7 @@
  * Here is actual build logic and behavior
  */
 UCLASS()
-class ARTS_BaseBuilding : public AActor
+class ARTS_BaseBuilding : public AActor, public ISaveableInterface
 {
 	GENERATED_BODY()
 
@@ -20,6 +21,11 @@ public:
 	// Initialize building mesh and collider
 	UFUNCTION(BlueprintCallable, Category = BaseBuilding)
 	virtual void Init(const struct FBuildingData& BuildData);
+
+	//~ Begin saveable interface
+	virtual void SaveObjectData(FArchive& Ar) override {}
+	virtual void LoadObjectData(FArchive& Ar) override {}
+	//~ End saveable interface
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
