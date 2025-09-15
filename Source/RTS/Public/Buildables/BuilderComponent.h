@@ -2,12 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "SaveGame/SaveableInterface.h"
 #include "BuilderComponent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogBuilderComponent, Log, All);
 
 UCLASS(ClassGroup = (Buildable), meta = (BlueprintSpawnableComponent))
-class RTS_API UBuilderComponent : public UActorComponent
+class RTS_API UBuilderComponent : public UActorComponent, public ISaveableInterface
 {
 	GENERATED_BODY()
 
@@ -154,6 +155,13 @@ private:
 	/** Calculate and validate target transform for each road point */
 	virtual void CreateRoadPreviewTiles(const FVector& Start, const FVector& Direction, const int32 Size);
 
+public:
+	//~ Begin saveable interface
+	virtual void SaveObjectData(FArchive& Ar) override {}
+	virtual void LoadObjectData(FArchive& Ar) override;
+	//~ End Saveable interface
+		
+private:
 	//========= Road ==============================
 	// Point, from which road started drawing
 	FVector Road_StartPosition = FVector::ZeroVector;

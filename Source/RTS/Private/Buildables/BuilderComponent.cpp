@@ -5,6 +5,7 @@
 #include "Core/RTS_PlayerController.h"
 #include "Buildables/RTS_BuildPreview.h"
 #include "Core/Libraries/RTS_HUD_Library.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -178,7 +179,8 @@ void UBuilderComponent::EnterRoadBuildMode()
 
 	bRoadBuildMode = true;
 
-	verifyf((RoadPreviewActor = WorldContext->SpawnActor<ARoad_Preview>(RoadPreview_Class.LoadSynchronous())) != nullptr, TEXT("Missing reference to RoadPreview actor class"));
+	verifyf((RoadPreviewActor = WorldContext->SpawnActor<ARoad_Preview>(RoadPreview_Class.LoadSynchronous())),
+	        TEXT("Missing reference to RoadPreview actor class"));
 	OnRoadBuildEnter.Broadcast();
 	if (bIsBuildMode)
 		ExitBuildMode();
@@ -282,5 +284,17 @@ void UBuilderComponent::CreateRoadPreviewTiles(const FVector& Start, const FVect
 		RoadPoints.Add(FRoadCell(targetLocation, targetRotation, IsValidPoint));
 		if (RoadPreviewActor)
 			RoadPreviewActor->AddPreviewInstance(targetLocation, targetRotation, IsValidPoint);
+	}
+}
+
+void UBuilderComponent::LoadObjectData(FArchive& Ar)
+{
+	// Rebinding preview buildings completed delegates
+	TArray<AActor*> outActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARTS_BuildPreview::StaticClass(), outActors);
+	for (AActor* actor : outActors)
+	{
+		if (ARTS_BuildPreview* build = Cast<ARTS_BuildPreview>(actor))
+			build->OnBuildCompleted.AddDynamic(this, &ThisClass::HandleBuildCompleted);
 	}
 }

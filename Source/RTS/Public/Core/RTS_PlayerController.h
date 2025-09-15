@@ -17,7 +17,7 @@ class RTS_API ARTS_PlayerController : public APlayerController
 
 public:
 	ARTS_PlayerController();
-
+	
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
 
@@ -99,6 +99,13 @@ protected: // Internal
 	UFUNCTION()
 	virtual void HandleBuildRoadExit();
 
+	UFUNCTION()
+	void Handle_SaveRequested(class URTS_SaveGame* SaveGameObject);
+
+	UFUNCTION()
+	void Handle_GameLoaded(class URTS_SaveGame* SaveGameObject);
+	
+
 #pragma region Internal stuff
 
 private:
@@ -108,7 +115,9 @@ private:
 	TObjectPtr<class ARTS_HUD> RTS_HUD;
 	UPROPERTY() // Cached input subsystem reference
 	UEnhancedInputLocalPlayerSubsystem* InputSystem = nullptr;
-
+	UPROPERTY()
+	TObjectPtr<class USaveGameSubsystem> SaveSubsystem = nullptr;
+	
 	/* Is mouse dragging? */
 	bool bIsDragging = false;
 	/* Can camera zoom in/out*/

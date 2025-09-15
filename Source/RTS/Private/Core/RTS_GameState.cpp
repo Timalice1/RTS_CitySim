@@ -24,11 +24,6 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 {
 	if (!SaveGameObject)
 		return;
-
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("SaveGameRequested")));
-#endif
-
 	
 	SaveGameObject->WorldActorsRecords.Empty();
 	for (FActorIterator It(WorldContext); It; ++It)
@@ -36,6 +31,8 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 		AActor* actor = *It;
 		if (!actor || !actor->Implements<USaveableInterface>())
 			continue;
+
+
 
 		FActorSaveDataRecord saveRecord;
 		saveRecord.ActorClass = actor->GetClass();
@@ -52,10 +49,6 @@ void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 {
 	if (!SaveGameObject)
 		return;
-
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("GameLoaded")));
-#endif
 
 	// Remove all saveable actors that already on the scene
 	for (FActorIterator It(WorldContext); It; ++It)

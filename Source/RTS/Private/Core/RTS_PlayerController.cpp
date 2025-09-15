@@ -6,6 +6,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "UI/RTS_HUD.h"
 #include "Buildables/BuilderComponent.h"
+#include "SaveGame/SaveGameSubsystem.h"
+#include "SaveGame/RTS_SaveGame.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRTSController, Log, All)
 
@@ -27,6 +29,10 @@ void ARTS_PlayerController::BeginPlay()
 		BuilderComp->OnRoadBuildEnter.AddDynamic(this, &ThisClass::HandleRoadBuildEnter);
 		BuilderComp->OnRoadBuildExit.AddDynamic(this, &ThisClass::HandleBuildRoadExit);
 	}
+
+	verify((SaveSubsystem = GetGameInstance()->GetSubsystem<USaveGameSubsystem>()) != nullptr);
+	SaveSubsystem->OnSaveGameRequested.AddDynamic(this, &ThisClass::Handle_SaveRequested);
+	SaveSubsystem->OnSaveLoaded.AddDynamic(this, &ThisClass::Handle_GameLoaded);
 
 	// UKismetSystemLibrary::ExecuteConsoleCommand(GetWorld(), TEXT("stat unit"), this);
 	UKismetSystemLibrary::ExecuteConsoleCommand(GetWorld(), TEXT("stat fps"), this);
@@ -182,6 +188,23 @@ void ARTS_PlayerController::HandleRoadBuildEnter()
 void ARTS_PlayerController::HandleBuildRoadExit()
 {
 	InputSystem->RemoveMappingContext(RoadsInputMapping.LoadSynchronous());
+}
+
+void ARTS_PlayerController::Handle_SaveRequested(URTS_SaveGame* SaveGameObject)
+{
+	for (UActorComponent* component : GetComponentsByInterface(USaveableInterface::StaticClass()))
+	{
+		FComponentSaveDataRecord newRecord;
+		newRecord.componentClass = component->GetClass();
+		newRecord.bytes = SaveSubsystem->SerializeObject(component);
+		SaveGameObject->componentsData.Add(newRecord);
+	}
+}
+
+void ARTS_PlayerController::Handle_GameLoaded(URTS_SaveGame* SaveGameObject)
+{
+	for (FComponentSaveDataRecord& componentData : SaveGameObject->componentsData)
+		SaveSubsystem->DeserializeObject(GetComponentByClass(componentData.componentClass), componentData.bytes);
 }
 
 AActor* ARTS_PlayerController::GetActorUnderCursor()

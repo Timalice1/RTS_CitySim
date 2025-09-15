@@ -10,11 +10,6 @@ void USaveGameSubsystem::Request_SaveGame(const FString& toSlot)
 {
 	if (!DefaultSaveGameObject)
 		DefaultSaveGameObject = Cast<URTS_SaveGame>(UGameplayStatics::CreateSaveGameObject(URTS_SaveGame::StaticClass()));
-
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("{green}SaveGameSubsystem -> SaveGameRequested")));
-#endif
-
 	OnSaveGameRequested.Broadcast(DefaultSaveGameObject);
 
 	FAsyncSaveGameToSlotDelegate save_Delegate;
@@ -25,10 +20,7 @@ void USaveGameSubsystem::Request_SaveGame(const FString& toSlot)
 void USaveGameSubsystem::Request_LoadGame(const FString& fromSlot)
 {
 	if (!UGameplayStatics::DoesSaveGameExist(fromSlot, INDEX_UserDefault))
-	{
-		DefaultSaveGameObject = Cast<URTS_SaveGame>(UGameplayStatics::CreateSaveGameObject(URTS_SaveGame::StaticClass()));
 		return;
-	}
 
 	FAsyncLoadGameFromSlotDelegate load_delegate;
 	load_delegate.BindUObject(this, &ThisClass::HandleGameLoaded);
@@ -42,6 +34,7 @@ TArray<uint8> USaveGameSubsystem::SerializeObject(UObject* Target)
 	FObjectAndNameAsStringProxyArchive Ar(memWriter, false);
 	Ar.ArIsSaveGame = true;
 	Target->Serialize(Ar);
+
 	if (ISaveableInterface* saveable = Cast<ISaveableInterface>(Target))
 		saveable->SaveObjectData(Ar);
 	return bytes;
@@ -53,6 +46,7 @@ void USaveGameSubsystem::DeserializeObject(UObject* Target, TArray<uint8> bytes)
 	FObjectAndNameAsStringProxyArchive Ar(memReader, false);
 	Ar.ArIsSaveGame = true;
 	Target->Serialize(Ar);
+
 	if (ISaveableInterface* saveable = Cast<ISaveableInterface>(Target))
 		saveable->LoadObjectData(Ar);
 }
@@ -69,5 +63,10 @@ void USaveGameSubsystem::HandleGameLoaded(const FString& SlotName, int UserIndex
 void USaveGameSubsystem::HandleGameSaved(const FString& SlotName, int UserIndex, bool bSuccess)
 {
 	if (bSuccess)
+	{
+#if WITH_EDITOR
+		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Red, FString::Printf(TEXT("GAME SAVED!")));
+#endif
 		OnGameSaved.Broadcast();
+	}
 }

@@ -23,6 +23,19 @@ struct FActorSaveDataRecord
 	TArray<uint8> ByteData;
 };
 
+/// Actor component save data record
+USTRUCT()
+struct FComponentSaveDataRecord
+{
+	GENERATED_BODY()
+
+	UPROPERTY(SaveGame)
+	UClass* componentClass;
+
+	UPROPERTY(SaveGame)
+	TArray<uint8> bytes;
+};
+
 /// Default save game object, used for saving game-specific data
 UCLASS(Abstract)
 class RTS_API URTS_SaveGame : public USaveGame
@@ -32,4 +45,7 @@ class RTS_API URTS_SaveGame : public USaveGame
 public:
 	UPROPERTY()
 	TArray<FActorSaveDataRecord> WorldActorsRecords;
+
+	UPROPERTY()
+	TArray<FComponentSaveDataRecord> componentsData;
 };
