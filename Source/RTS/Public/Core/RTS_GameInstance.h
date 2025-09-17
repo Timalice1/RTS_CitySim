@@ -8,4 +8,7 @@ UCLASS()
 class RTS_API URTS_GameInstance : public UGameInstance
 {
 	GENERATED_BODY()
+
+public:
+	virtual void Init() override;
 };

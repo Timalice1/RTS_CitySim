@@ -7,8 +7,7 @@
 /**
  * Optional button, that bounded to building system but are not Building Item
  * Can be road tool, fence/wall tool or demolition tool
- *
- * TODO: Add reference here to BuilderComponent
+ 
  */
 UCLASS(Abstract)
 class RTS_API UG_Button_BuildMenuOptional : public UUserWidget

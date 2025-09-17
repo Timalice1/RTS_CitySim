@@ -42,6 +42,7 @@ void ARTS_HUD::TogglePauseMenu()
 {
 	bPauseMenuOpened = !bPauseMenuOpened;
 	MenusLayer_Widget->SetVisibility(bPauseMenuOpened ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+
 	for (UUserWidget* layer : UILayers)
 	{
 		if (layer != MenusLayer_Widget)

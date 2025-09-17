@@ -61,19 +61,29 @@ void USaveGameSubsystem::DeserializeObject(UObject* Target, TArray<uint8> bytes)
 
 void USaveGameSubsystem::AddSavingSlot(const FString& InSlotName)
 {
-	if (!SaveGame_Globals)
-		SaveGame_Globals = Cast<URTS_Saving_Global>(UGameplayStatics::CreateSaveGameObject(URTS_Saving_Global::StaticClass()));
-
-	SaveGame_Globals->savingsSlots.Add(InSlotName);
-	UGameplayStatics::SaveGameToSlot(SaveGame_Globals, SLOT_Global, INDEX_UserDefault);
+	if (SaveGame_Globals)
+	{
+		SaveGame_Globals->savingsSlots.Add(InSlotName);
+		UGameplayStatics::SaveGameToSlot(SaveGame_Globals, SLOT_Global, INDEX_UserDefault);
+	}
 }
 
 TArray<FString> USaveGameSubsystem::LoadSavingsSlots() const
 {
 	if (UGameplayStatics::DoesSaveGameExist(SLOT_Global, INDEX_UserDefault))
 		return Cast<URTS_Saving_Global>(UGameplayStatics::LoadGameFromSlot(SLOT_Global, INDEX_UserDefault))->savingsSlots;
-	
+
 	return TArray<FString>();
+}
+
+void USaveGameSubsystem::LoadGlobalSave()
+{
+	if (!UGameplayStatics::DoesSaveGameExist(SLOT_Global, INDEX_UserDefault))
+	{
+		SaveGame_Globals = Cast<URTS_Saving_Global>(UGameplayStatics::CreateSaveGameObject(URTS_Saving_Global::StaticClass()));
+		return;
+	}
+	SaveGame_Globals = Cast<URTS_Saving_Global>(UGameplayStatics::LoadGameFromSlot(SLOT_Global, INDEX_UserDefault));
 }
 
 void USaveGameSubsystem::HandleGameLoaded(const FString& SlotName, int UserIndex, USaveGame* SaveObject)

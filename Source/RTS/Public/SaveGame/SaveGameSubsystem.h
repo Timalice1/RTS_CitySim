@@ -11,6 +11,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSaveLoadedDelegate, class URTS_Sa
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSaveGameRequestedDelegate, class URTS_SaveGame*, SaveGameObject);
 
+
 UCLASS(BlueprintType, Blueprintable)
 class RTS_API USaveGameSubsystem : public UGameInstanceSubsystem
 {
@@ -35,7 +36,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	virtual TArray<FString> LoadSavingsSlots() const;
-	
+
+	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
+	virtual void LoadGlobalSave();
+
 	/// Called after successful game saving
 	UPROPERTY(BlueprintAssignable, Category = Events)
 	FOnGameSavedDelegate OnGameSaved;
@@ -47,9 +51,8 @@ public:
 	/// Called on game save is successfully loaded
 	UPROPERTY(BlueprintAssignable, Category = Events)
 	FOnSaveLoadedDelegate OnSaveLoaded;
-	
-protected:
 
+protected:
 	virtual void AddSavingSlot(const FString& InSlotName);
 
 private:

@@ -12,4 +12,18 @@ UCLASS(Abstract)
 class RTS_API UL_Menus : public UUserWidget
 {
 	GENERATED_BODY()
+
+public:
+	virtual void NativeConstruct() override;
+	
+protected:
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<class UWidgetSwitcher> MenusSwitcher = nullptr;
+
+	UFUNCTION(BlueprintCallable, Category = MenusLayer)
+	virtual void ToggleMenu(UUserWidget* InMenuWidget);
+
+private:
+	UPROPERTY()
+	UUserWidget* ActiveMenu = nullptr;
 };
