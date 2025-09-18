@@ -5,6 +5,9 @@ void UL_Menus::NativeConstruct()
 {
 	Super::NativeConstruct();
 	MenusSwitcher->SetActiveWidget(nullptr);
+	
+	for (UWidget* panel : MenusSwitcher->GetAllChildren())
+		panel->SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UL_Menus::ToggleMenu(UUserWidget* InMenuWidget)

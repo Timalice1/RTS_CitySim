@@ -21,5 +21,10 @@ protected:
 
 private:
 	UFUNCTION()
+	virtual void HandleGameSaved();
+	UFUNCTION()
 	virtual void Handle_SaveButtonClick();
+
+	UFUNCTION()
+	virtual void Handle_SlotSelected(UObject* SelectedItem);
 };

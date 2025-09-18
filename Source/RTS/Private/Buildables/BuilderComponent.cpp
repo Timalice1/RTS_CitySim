@@ -295,6 +295,9 @@ void UBuilderComponent::LoadObjectData(FArchive& Ar)
 	for (AActor* actor : outActors)
 	{
 		if (ARTS_BuildPreview* build = Cast<ARTS_BuildPreview>(actor))
+		{
+			build->OnBuildCompleted.RemoveAll(this);
 			build->OnBuildCompleted.AddDynamic(this, &ThisClass::HandleBuildCompleted);
+		}
 	}
 }

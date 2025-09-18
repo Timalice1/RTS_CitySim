@@ -1,40 +1,37 @@
 ﻿#include "UI/SaveGame/SaveSlotsList.h"
-
-#include "Components/ScrollBox.h"
+#include "Components/ListView.h"
 #include "SaveGame/SaveGameSubsystem.h"
-#include "UI/Generic/G_TextBlock.h"
+#include "UI/SaveGame/SaveSlotEntry.h"
 
 void USaveSlotsList::NativeConstruct()
 {
 	Super::NativeConstruct();
-	UpdateList();
+	SlotsList->OnItemSelectionChanged().AddUObject(this, &ThisClass::Handle_SelectionChanged);
+}
+
+void USaveSlotsList::UpdateList()
+{
+#if WITH_EDITOR
+	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("TEXT")));
+#endif
+	SlotsList->ClearListItems();
+	for (const FString& savingSlot : GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->LoadSavingsSlots())
+		AddSaveSlot(savingSlot);
+}
+
+void USaveSlotsList::Handle_SelectionChanged(UObject* Object)
+{
+	if (Object)
+		OnSlotSelected.Broadcast(Object);
 }
 
 void USaveSlotsList::AddSaveSlot(const FString& InSlotName)
 {
-	if (!slotNameTextTemplate)
-		return;
-
-	if (UG_TextBlock* slotNameTextBlock = CreateWidget<UG_TextBlock>(this, slotNameTextTemplate.LoadSynchronous()))
+	if (USlotEntryMetadata* slotEntry = NewObject<USlotEntryMetadata>())
 	{
-		TArray<UWidget*> tempArray = Slots_Container->GetAllChildren();
-		slotNameTextBlock->SetText(FText::FromString(InSlotName));
-		tempArray.Insert(slotNameTextBlock, 0);
-		Slots_Container->ClearChildren();
-
-		for (UWidget* widget : tempArray)
-			Slots_Container->AddChild(widget);
+		slotEntry->SlotName = InSlotName;
+		SlotsList->AddItem(slotEntry);
 	}
 }
 
 void USaveSlotsList::RemoveSlot(const FString& InSlotName) {}
-
-void USaveSlotsList::UpdateList()
-{
-	Slots_Container->ClearChildren();
-	if (const TArray<FString> savings = GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->LoadSavingsSlots(); !savings.IsEmpty())
-	{
-		for (const FString& savingSlot : savings)
-			AddSaveSlot(savingSlot);
-	}
-}

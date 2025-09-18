@@ -61,7 +61,7 @@ void USaveGameSubsystem::DeserializeObject(UObject* Target, TArray<uint8> bytes)
 
 void USaveGameSubsystem::AddSavingSlot(const FString& InSlotName)
 {
-	if (SaveGame_Globals)
+	if (SaveGame_Globals && !SaveGame_Globals->savingsSlots.Contains(InSlotName))
 	{
 		SaveGame_Globals->savingsSlots.Add(InSlotName);
 		UGameplayStatics::SaveGameToSlot(SaveGame_Globals, SLOT_Global, INDEX_UserDefault);

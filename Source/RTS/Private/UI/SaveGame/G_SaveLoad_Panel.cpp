@@ -19,5 +19,3 @@ void UG_SaveLoad_Panel::Handle_VisibilityChanged(ESlateVisibility InVisibility)
 {
 	SlotsList->UpdateList();
 }
-
-
