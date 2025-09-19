@@ -10,7 +10,6 @@ class RTS_API ULoadGameMenu : public UG_SaveLoad_Panel
 	GENERATED_BODY()
 
 public:
-	
 	virtual void NativeConstruct() override;
 
 protected:
@@ -23,7 +22,7 @@ protected:
 private:
 	UPROPERTY()
 	TObjectPtr<class USlotEntryMetadata> SelectedSlotData = nullptr;
-	
+
 	UFUNCTION()
 	virtual void Handle_DeleteSave();
 
@@ -32,4 +31,9 @@ private:
 
 	UFUNCTION()
 	void Handle_SelectionChanged(UObject* SelectedItem);
+
+	UFUNCTION()
+	void Handle_ListUpdated();
+
+	virtual void Handle_VisibilityChanged(ESlateVisibility InVisibility) override;
 };

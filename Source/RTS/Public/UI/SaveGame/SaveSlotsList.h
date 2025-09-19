@@ -6,6 +6,8 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSaveSlotSelectedDelegate, UObject*, SelectedItem);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnListUpdatedDelegate);
+
 UCLASS(Abstract)
 class RTS_API USaveSlotsList : public UUserWidget
 {
@@ -18,10 +20,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Config)
 	TSoftClassPtr<class UG_TextBlock> slotNameTextTemplate;
 
-private:
-	void Handle_SelectionChanged(UObject* Object);
-	virtual void AddSaveSlot(const FString& InSlotName);
-
 public:
 	virtual void NativeConstruct() override;
 
@@ -32,4 +30,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = Events)
 	FOnSaveSlotSelectedDelegate OnSlotSelected;
+
+	UPROPERTY(BlueprintAssignable, Category = Events)
+	FOnListUpdatedDelegate OnListUpdated;
+
+private:
+	void Handle_SelectionChanged(UObject* Object);
 };

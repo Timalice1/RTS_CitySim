@@ -26,6 +26,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	virtual void Request_LoadGame(const FString& fromSlot);
 
+
 	/// Serializes target object into bytes array
 	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	TArray<uint8> SerializeObject(UObject* Target);
@@ -36,6 +37,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	virtual TArray<FString> LoadSavingsSlots() const;
+
+	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
+	virtual void DeleteSaveSlot(const FString& InSlotName) const;
 
 	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	virtual void LoadGlobalSave();

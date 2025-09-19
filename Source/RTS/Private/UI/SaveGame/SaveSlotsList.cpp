@@ -7,31 +7,30 @@ void USaveSlotsList::NativeConstruct()
 {
 	Super::NativeConstruct();
 	SlotsList->OnItemSelectionChanged().AddUObject(this, &ThisClass::Handle_SelectionChanged);
+	GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->OnGameSaved.AddDynamic(this, &ThisClass::UpdateList);
 }
 
 void USaveSlotsList::UpdateList()
 {
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("TEXT")));
-#endif
-	SlotsList->ClearListItems();
+	TArray<UObject*> items;
+
 	for (const FString& savingSlot : GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->LoadSavingsSlots())
-		AddSaveSlot(savingSlot);
+	{
+		if (USlotEntryMetadata* slotEntry = NewObject<USlotEntryMetadata>())
+		{
+			slotEntry->SlotName = savingSlot;
+			items.Insert(slotEntry, 0);
+		}
+	}
+	SlotsList->SetListItems(items);
+	SlotsList->ClearSelection();
+	OnListUpdated.Broadcast();
 }
 
 void USaveSlotsList::Handle_SelectionChanged(UObject* Object)
 {
 	if (Object)
 		OnSlotSelected.Broadcast(Object);
-}
-
-void USaveSlotsList::AddSaveSlot(const FString& InSlotName)
-{
-	if (USlotEntryMetadata* slotEntry = NewObject<USlotEntryMetadata>())
-	{
-		slotEntry->SlotName = InSlotName;
-		SlotsList->AddItem(slotEntry);
-	}
 }
 
 void USaveSlotsList::RemoveSlot(const FString& InSlotName) {}

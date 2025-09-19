@@ -72,8 +72,14 @@ TArray<FString> USaveGameSubsystem::LoadSavingsSlots() const
 {
 	if (UGameplayStatics::DoesSaveGameExist(SLOT_Global, INDEX_UserDefault))
 		return Cast<URTS_Saving_Global>(UGameplayStatics::LoadGameFromSlot(SLOT_Global, INDEX_UserDefault))->savingsSlots;
-
 	return TArray<FString>();
+}
+
+void USaveGameSubsystem::DeleteSaveSlot(const FString& InSlotName) const
+{
+	UGameplayStatics::DeleteGameInSlot(InSlotName, INDEX_UserDefault);
+	SaveGame_Globals->savingsSlots.Remove(InSlotName);
+	UGameplayStatics::SaveGameToSlot(SaveGame_Globals, SLOT_Global, INDEX_UserDefault);
 }
 
 void USaveGameSubsystem::LoadGlobalSave()

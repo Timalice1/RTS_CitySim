@@ -23,7 +23,7 @@ protected:
 	UPROPERTY(EditInstanceOnly, Category = Config)
 	FText PanelTitleText = FText::FromString(TEXT("panel_title"));
 
-private:
+protected:
 	UFUNCTION()
 	virtual void Handle_VisibilityChanged(ESlateVisibility InVisibility);
 };

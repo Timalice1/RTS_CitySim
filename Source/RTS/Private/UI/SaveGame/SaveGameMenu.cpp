@@ -13,12 +13,6 @@ void USaveGameMenu::NativeConstruct()
 	Super::NativeConstruct();
 	SaveGame_Button->OnClicked.AddDynamic(this, &ThisClass::Handle_SaveButtonClick);
 	SlotsList->OnSlotSelected.AddDynamic(this, &ThisClass::Handle_SlotSelected);
-	GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->OnGameSaved.AddDynamic(this, &ThisClass::HandleGameSaved);
-}
-
-void USaveGameMenu::HandleGameSaved()
-{
-	SlotsList->UpdateList();
 }
 
 void USaveGameMenu::Handle_SaveButtonClick()
