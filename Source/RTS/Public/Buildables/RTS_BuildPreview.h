@@ -28,17 +28,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Buildable)
 	virtual FBuildingData GetBuildingData() const { return _buildingData; }
 
-	/// Check if building is placeable. Updates material and IsPlaceable status
-	/// By default, checks overlaps with other actors on the scene.
-	/// For additional validations, override this function in child classes.
 	UFUNCTION(BlueprintCallable, Category = Buildable)
-	virtual void ValidatePlacement();
+	virtual FVector GetBuildingBounds() const { return buildingBounds; }
 
-	/// Returns placement status flag for this building.
-	/// Placement status updates by ValidatePlacement()
-	UFUNCTION(BlueprintCallable, Category = Buildable)
-	virtual bool IsPlaceable() const { return bIsPlaceable; }
-
+	virtual void SetIsPlaceable(bool bIsPlaceable);
+	
 	//~ Begin Saveable interface
 	virtual void SaveObjectData(FArchive& Ar) override;
 	virtual void LoadObjectData(FArchive& Ar) override;
@@ -76,10 +70,12 @@ private: // Internal data
 
 	UPROPERTY(SaveGame)
 	float _buildProgress = 0.f;
-	
+
 	UPROPERTY(SaveGame)
 	FBuildingData _buildingData;
 
-	float _buildRate = 3.f;
-	bool bIsPlaceable = true;
+	UPROPERTY(SaveGame)
+	float _durabilityCurrent = 0.f;
+
+	FVector buildingBounds;
 };

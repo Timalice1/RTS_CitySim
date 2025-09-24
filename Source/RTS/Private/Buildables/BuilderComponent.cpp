@@ -43,7 +43,7 @@ void UBuilderComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 		BuildPreviewActor->SetActorLocation(intLocation);
 		BuildPreviewActor->SetActorRotation(intRotation);
-		BuildPreviewActor->ValidatePlacement();
+		BuildPreviewActor->SetIsPlaceable(ValidatePlacement(intLocation, BuildPreviewActor->GetBuildingBounds(), BuildPreviewActor));
 	}
 
 	// Road tile placement
@@ -51,7 +51,7 @@ void UBuilderComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		RoadPreviewActor->ClearPreview();
 		const FVector targetLocation = SnapToGrid(player->TraceMouseToLandscape());
-		RoadPreviewActor->AddPreviewInstance(targetLocation, FRotator::ZeroRotator, ValidateRoadTile(targetLocation));
+		RoadPreviewActor->AddPreviewInstance(targetLocation, FRotator::ZeroRotator, ValidatePlacement(targetLocation, FVector(CellSize)));
 	}
 }
 
@@ -93,7 +93,7 @@ void UBuilderComponent::RotateBuilding(const int32 direction)
 
 void UBuilderComponent::BuildDeploy()
 {
-	if (BuildPreviewActor && BuildPreviewActor->IsPlaceable())
+	if (BuildPreviewActor && ValidatePlacement(BuildPreviewActor->GetActorLocation(), BuildPreviewActor->GetBuildingBounds(), BuildPreviewActor))
 	{
 		if (ARTS_BuildPreview* build = WorldContext->SpawnActor<ARTS_BuildPreview>(
 			BuildPreview_Class.LoadSynchronous(),
@@ -205,8 +205,11 @@ void UBuilderComponent::Road_Build()
 	const FVector MouseCurrent = SnapToGrid(player->TraceMouseToLandscape());
 	const FVector roadDirection = MouseCurrent - Road_StartPosition;
 
+
 	// Find bounding box size (manhattan)
-	const FVector boxSize = FVector(FMath::Abs(Road_StartPosition.X - MouseCurrent.X), FMath::Abs(Road_StartPosition.Y - MouseCurrent.Y), 0.f);
+	const FVector boxSize = FVector(FMath::Abs(Road_StartPosition.X - MouseCurrent.X),
+	                                FMath::Abs(Road_StartPosition.Y - MouseCurrent.Y),
+	                                FMath::Abs(Road_StartPosition.Z - MouseCurrent.Z));
 
 	// If perimeter == 1, that means that bounding box are 1x1 cells size, so we can recalculate primary axis direction
 	// Otherwise, primary axis direction is locked
@@ -265,21 +268,27 @@ void UBuilderComponent::Road_BuildCancel()
 	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("Cancel build road")));
 }
 
-bool UBuilderComponent::ValidateRoadTile(const FVector& InLocation) const
+bool UBuilderComponent::ValidatePlacement(const FVector& InLocation, const FVector& InObjectSize, AActor* IgnoredActor) const
 {
-	// All meshes, actors and any collision use Visibility channel as a default blocking channel
-	// Visibility channel are only ignored by terrain meshes, who use custom trace channel
-	// So, point will be only valid on the terrain, preventing any overlaps with another meshes and actors
-	return !WorldContext->OverlapAnyTestByChannel(InLocation, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeBox(FVector(CellSize * .4f)));
+	FCollisionQueryParams queryParams;
+	queryParams.AddIgnoredActor(IgnoredActor);
+
+	// By default, every actor/mesh/collider blocks Visibility channel.
+	// In this case, we can use visibility channel as a default one to check this target actor overlapping with something
+	// And since landscape/terrain use own collision channel, ignoring visibility collisions,
+	// This actor would be valid only on landscape
+	const bool bPlaceable = !WorldContext->OverlapAnyTestByChannel(InLocation, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeBox(InObjectSize), queryParams);
+	// TODO: Add slope and height difference validation
+	return bPlaceable;
 }
 
 void UBuilderComponent::CreateRoadPreviewTiles(const FVector& Start, const FVector& Direction, const int32 Size)
 {
 	for (int32 i = 0; i < Size; i++)
 	{
-		const FVector targetLocation = Start + Direction * (i * CellSize);
-		const FRotator targetRotation = UKismetMathLibrary::FindLookAtRotation(targetLocation, targetLocation + Direction * CellSize);
-		const bool IsValidPoint = ValidateRoadTile(targetLocation);
+		FVector targetLocation = Start + Direction * (i * CellSize);
+		FRotator targetRotation = UKismetMathLibrary::FindLookAtRotation(targetLocation, targetLocation + Direction * CellSize);
+		const bool IsValidPoint = ValidatePlacement(targetLocation, FVector(CellSize * .4f));
 
 		RoadPoints.Add(FRoadCell(targetLocation, targetRotation, IsValidPoint));
 		if (RoadPreviewActor)

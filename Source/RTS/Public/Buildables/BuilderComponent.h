@@ -25,7 +25,7 @@ public:
 	// TODO: Add road data, mesh, etc
 	UFUNCTION(BlueprintCallable, Category = "BuilderComponent|Roads")
 	virtual void EnterRoadBuildMode();
-	
+
 	/// Rotates preview building in given direction
 	virtual void RotateBuilding(const int32 direction = 1);
 
@@ -70,9 +70,7 @@ public:
 		bool bIsValid;
 
 		FRoadCell(const FVector& InLocation, const FRotator& InRotation, bool IsValid)
-			: Location(InLocation), Rotation(InRotation), bIsValid(IsValid)
-		{
-		}
+			: Location(InLocation), Rotation(InRotation), bIsValid(IsValid) {}
 	};
 
 	//======================Events=============================
@@ -141,7 +139,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Grid, meta = (ForceUnits = "Centimeters"))
 	uint32 CellSize = 100;
 
-	bool ValidateRoadTile(const FVector& InLocation) const;
+	bool ValidatePlacement(const FVector& InLocation, const FVector& InObjectSize, AActor* IgnoredActor = 0) const;
 
 private:
 	UPROPERTY()
@@ -160,7 +158,7 @@ public:
 	virtual void SaveObjectData(FArchive& Ar) override {}
 	virtual void LoadObjectData(FArchive& Ar) override;
 	//~ End Saveable interface
-		
+
 private:
 	//========= Road ==============================
 	// Point, from which road started drawing

@@ -391,10 +391,6 @@
 			"Enabled": false
 		},
 		{
-			"Name": "ProceduralMeshComponent",
-			"Enabled": false
-		},
-		{
 			"Name": "RigVM",
 			"Enabled": false
 		},
@@ -454,6 +450,10 @@
 		},
 		{
 			"Name": "ModelingToolsEditorMode",
+			"Enabled": true
+		},
+		{
+			"Name": "PCG",
 			"Enabled": true
 		}
 	]

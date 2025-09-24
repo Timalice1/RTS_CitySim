@@ -2,7 +2,6 @@
 #include "Buildables/BuildingData.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
-#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Materials/MaterialInstance.h"
 
@@ -45,14 +44,15 @@ void ARTS_BuildPreview::InitMeshAndCollider()
 
 		// Building size adjustment to match world grid parameters
 		// BuildingSize = MeshBounds + (CellSize - (MeshBounds % CellSize));
-		FVector targetSize = Max;
+		buildingBounds = Max;
 		const uint32 CellSize = _buildingData.CellSize;
 		if ((static_cast<int>(Max.X) % CellSize != 0) && (static_cast<int>(Max.Y) % CellSize != 0))
 		{
-			targetSize.X = Max.X + (CellSize - static_cast<int>(Max.X) % CellSize);
-			targetSize.Y = Max.Y + (CellSize - static_cast<int>(Max.Y) % CellSize);
+			buildingBounds.X = Max.X + (CellSize - static_cast<int>(Max.X) % CellSize);
+			buildingBounds.Y = Max.Y + (CellSize - static_cast<int>(Max.Y) % CellSize);
 		}
-		BoxCollider->SetBoxExtent(targetSize);
+		buildingBounds.Z *= .5f;
+		BoxCollider->SetBoxExtent(buildingBounds);
 	}
 }
 
@@ -69,13 +69,14 @@ void ARTS_BuildPreview::ApplyOverlay()
 
 void ARTS_BuildPreview::StartBuild()
 {
-	if (bIsPlaceable)
-	{
-		_buildProgress = 0;
-		GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, _buildRate, true, 0);
-		// Disable overlay material
-		BuildingMesh->SetOverlayMaterial(nullptr);
-	}
+	_durabilityCurrent = 0.f;
+	_buildProgress = 0.f;
+
+	// TODO: Create new task in the tasks manager
+
+	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
+	// Disable overlay material
+	BuildingMesh->SetOverlayMaterial(nullptr);
 }
 
 void ARTS_BuildPreview::UpdateBuildingProgress()
@@ -98,14 +99,15 @@ void ARTS_BuildPreview::UpdateBuildingProgress()
 				BuildingMesh->SetStaticMesh(progressMesh);
 		}
 	}
-	_buildProgress += 1.f / _buildingData.BuildingMesh_Stages.Num();
+
+	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), _buildProgress), NULL, FLinearColor::Yellow);
+
+	_durabilityCurrent += .1f;
+	_buildProgress = _durabilityCurrent / _buildingData.MaxDurability;
 }
 
-void ARTS_BuildPreview::ValidatePlacement()
+void ARTS_BuildPreview::SetIsPlaceable(bool bIsPlaceable)
 {
-	TArray<AActor*> OverlappedActors;
-	BoxCollider->GetOverlappingActors(OverlappedActors);
-	bIsPlaceable = OverlappedActors.Num() == 0;
 	if (_overlayMaterial)
 		_overlayMaterial->SetScalarParameterValue(TEXT("Status"), bIsPlaceable ? 1.f : 0.f);
 }
@@ -115,14 +117,11 @@ void ARTS_BuildPreview::SaveObjectData(FArchive& Ar) {}
 void ARTS_BuildPreview::LoadObjectData(FArchive& Ar)
 {
 	InitMeshAndCollider();
-	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, _buildRate, true, 0);
+	//	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, _buildRate, true, 0);
 }
 
 void ARTS_BuildPreview::EndBuild()
 {
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Green, FString::Printf(TEXT("%s: Build finish"), *GetName()));
-#endif
 	GetWorld()->GetTimerManager().ClearTimer(_buildTimer);
 	OnBuildCompleted.Broadcast(this);
 }
