@@ -102,6 +102,8 @@ void ARTS_BuildPreview::UpdateBuildingProgress()
 
 	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), _buildProgress), NULL, FLinearColor::Yellow);
 
+	// TODO: Save building progress, restore progress on load
+	
 	_durabilityCurrent += .1f;
 	_buildProgress = _durabilityCurrent / _buildingData.MaxDurability;
 }

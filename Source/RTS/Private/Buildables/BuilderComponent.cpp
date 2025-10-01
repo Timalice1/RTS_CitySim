@@ -51,7 +51,7 @@ void UBuilderComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		RoadPreviewActor->ClearPreview();
 		const FVector targetLocation = SnapToGrid(player->TraceMouseToLandscape());
-		RoadPreviewActor->AddPreviewInstance(targetLocation, FRotator::ZeroRotator, ValidatePlacement(targetLocation, FVector(CellSize)));
+		RoadPreviewActor->AddPreviewInstance(targetLocation, FRotator::ZeroRotator, ValidatePlacement(targetLocation, FVector(CellSize * .4, CellSize * .4, 0.5f)));
 	}
 }
 
@@ -273,12 +273,10 @@ bool UBuilderComponent::ValidatePlacement(const FVector& InLocation, const FVect
 	FCollisionQueryParams queryParams;
 	queryParams.AddIgnoredActor(IgnoredActor);
 
-	// By default, every actor/mesh/collider blocks Visibility channel.
-	// In this case, we can use visibility channel as a default one to check this target actor overlapping with something
-	// And since landscape/terrain use own collision channel, ignoring visibility collisions,
-	// This actor would be valid only on landscape
-	const bool bPlaceable = !WorldContext->OverlapAnyTestByChannel(InLocation, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeBox(InObjectSize), queryParams);
 	// TODO: Add slope and height difference validation
+	// Add trace to the bottom 
+	const bool bPlaceable = !WorldContext->OverlapAnyTestByChannel(InLocation + FVector::UpVector, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeBox(InObjectSize), queryParams);
+
 	return bPlaceable;
 }
 
@@ -288,7 +286,7 @@ void UBuilderComponent::CreateRoadPreviewTiles(const FVector& Start, const FVect
 	{
 		FVector targetLocation = Start + Direction * (i * CellSize);
 		FRotator targetRotation = UKismetMathLibrary::FindLookAtRotation(targetLocation, targetLocation + Direction * CellSize);
-		const bool IsValidPoint = ValidatePlacement(targetLocation, FVector(CellSize * .4f));
+		const bool IsValidPoint = ValidatePlacement(targetLocation, FVector(CellSize * .4f, CellSize * .4f, 0.5f));
 
 		RoadPoints.Add(FRoadCell(targetLocation, targetRotation, IsValidPoint));
 		if (RoadPreviewActor)

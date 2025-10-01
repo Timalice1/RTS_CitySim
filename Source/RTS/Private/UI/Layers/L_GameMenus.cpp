@@ -7,10 +7,11 @@
 void UL_GameMenus::NativeConstruct()
 {
 	Super::NativeConstruct();
+
 	verify((player = Cast<ARTS_PlayerController>(GetOwningPlayer())) != nullptr);
 
 	// ENSURE ALL PANELS WIDGETS ARE COLLAPSED INITIALLY
-	
+
 	if (BuildingsMenuPanel) // Since widget is optional
 	{
 		BuildingsMenuPanel->SetVisibility(ESlateVisibility::Collapsed);
@@ -22,7 +23,7 @@ bool UL_GameMenus::CloseActivePanel()
 {
 	if (!ActivePanelWidget)
 		return false;
-	
+
 	ActivePanelWidget->SetVisibility(ESlateVisibility::Collapsed);
 	ActivePanelWidget = nullptr;
 	return true;
