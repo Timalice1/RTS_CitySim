@@ -41,18 +41,17 @@ void ARTS_BuildPreview::InitMeshAndCollider()
 		// Init collider size
 		FVector Min, Max;
 		BuildingMesh->GetLocalBounds(Min, Max);
+		buildingBounds = Min;
 
-		/*// Building size adjustment to match world grid parameters
+		// Building size adjustment to match world grid parameters
 		// BuildingSize = MeshBounds + (CellSize - (MeshBounds % CellSize));
-		buildingBounds = Max;
 		const uint32 CellSize = _buildingData.CellSize;
 		if ((static_cast<int>(Max.X) % CellSize != 0) && (static_cast<int>(Max.Y) % CellSize != 0))
 		{
 			buildingBounds.X = Max.X + (CellSize - static_cast<int>(Max.X) % CellSize);
 			buildingBounds.Y = Max.Y + (CellSize - static_cast<int>(Max.Y) % CellSize);
 		}
-		buildingBounds.Z *= .5f;
-		// BoxCollider->SetBoxExtent(buildingBounds);*/
+		//buildingBounds.Z *= .5f;
 	}
 }
 
@@ -73,7 +72,6 @@ void ARTS_BuildPreview::StartBuild()
 	_buildProgress = 0.f;
 
 	// TODO: Create new task in the tasks manager
-
 	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
 	// Disable overlay material
 	BuildingMesh->SetOverlayMaterial(nullptr);
@@ -103,7 +101,6 @@ void ARTS_BuildPreview::UpdateBuildingProgress()
 	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), _buildProgress), NULL, FLinearColor::Yellow);
 
 	// TODO: Save building progress, restore progress on load
-	
 	_durabilityCurrent += .1f;
 	_buildProgress = _durabilityCurrent / _buildingData.MaxDurability;
 }
@@ -119,7 +116,7 @@ void ARTS_BuildPreview::SaveObjectData(FArchive& Ar) {}
 void ARTS_BuildPreview::LoadObjectData(FArchive& Ar)
 {
 	InitMeshAndCollider();
-	//	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, _buildRate, true, 0);
+	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
 }
 
 void ARTS_BuildPreview::EndBuild()

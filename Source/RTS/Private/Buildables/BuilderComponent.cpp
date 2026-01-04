@@ -51,7 +51,7 @@ void UBuilderComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		RoadPreviewActor->ClearPreview();
 		const FVector targetLocation = SnapToGrid(player->TraceMouseToLandscape());
-		RoadPreviewActor->AddPreviewInstance(targetLocation, FRotator::ZeroRotator, ValidatePlacement(targetLocation, FVector(CellSize * .4, CellSize * .4, 10.f)));
+		RoadPreviewActor->AddPreviewInstance(targetLocation, FRotator::ZeroRotator, ValidatePlacement(targetLocation, FVector(CellSize * .4, CellSize * .4, .5f)));
 	}
 }
 
@@ -289,7 +289,7 @@ void UBuilderComponent::CreateRoadPreviewTiles(const FVector& Start, const FVect
 	{
 		FVector targetLocation = Start + Direction * (i * CellSize);
 		FRotator targetRotation = UKismetMathLibrary::FindLookAtRotation(targetLocation, targetLocation + Direction * CellSize);
-		const bool IsValidPoint = ValidatePlacement(targetLocation, FVector(CellSize * .4f, CellSize * .4f, 10.f));
+		const bool IsValidPoint = ValidatePlacement(targetLocation, FVector(CellSize * .4f, CellSize * .4f, .5f));
 
 		RoadPoints.Add(FRoadCell(targetLocation, targetRotation, IsValidPoint));
 		if (RoadPreviewActor)

@@ -58,7 +58,7 @@ void ARoad_Preview::AddPreviewInstance(const FVector& Location, const FRotator& 
 {
 	const int32 newInst = Preview_ISM->AddInstance(FTransform(
 		                                               Rotation,
-		                                               Location + FVector::UpVector * .5f, // Move up slightly to be over existing road tiles
+		                                               Location + FVector::UpVector * 1.f, // Move up slightly to be over existing road tiles
 		                                               FVector(.9f, .9f, .9f)), true);
 	Preview_ISM->SetCustomDataValue(newInst, 0, IsValid ? 1.f : 0.f, true);
 }
