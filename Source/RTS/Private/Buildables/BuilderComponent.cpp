@@ -245,7 +245,7 @@ void UBuilderComponent::Road_Deploy()
 	if (!IsRoadValid())
 	{
 		bPlaceRoad = false;
-		return;~
+		return;
 	}
 
 	// Spawn actual road actor instead
