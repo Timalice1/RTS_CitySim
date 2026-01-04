@@ -152,7 +152,9 @@ private:
 
 	/** Calculate and validate target transform for each road point */
 	virtual void CreateRoadPreviewTiles(const FVector& Start, const FVector& Direction, const int32 Size);
-
+	
+	/** Return false if not a single tile of rad is valid*/
+	virtual bool IsRoadValid();
 public:
 	//~ Begin saveable interface
 	virtual void SaveObjectData(FArchive& Ar) override {}

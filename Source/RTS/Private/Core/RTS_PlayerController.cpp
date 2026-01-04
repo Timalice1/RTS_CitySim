@@ -114,7 +114,7 @@ void ARTS_PlayerController::RotateCamera(const FInputActionInstance& ActionInsta
 {
 	if (!bCameraRotationEnabled)
 		return;
-	_controlledPawn->RotateCamera(ActionInstance.GetValue().Get<float>());
+	_controlledPawn->RotateCamera(ActionInstance.GetValue().Get<FVector2D>());
 }
 
 void ARTS_PlayerController::ZoomCamera(const FInputActionInstance& ActionInstance)

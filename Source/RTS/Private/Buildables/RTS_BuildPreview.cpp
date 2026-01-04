@@ -42,7 +42,7 @@ void ARTS_BuildPreview::InitMeshAndCollider()
 		FVector Min, Max;
 		BuildingMesh->GetLocalBounds(Min, Max);
 
-		// Building size adjustment to match world grid parameters
+		/*// Building size adjustment to match world grid parameters
 		// BuildingSize = MeshBounds + (CellSize - (MeshBounds % CellSize));
 		buildingBounds = Max;
 		const uint32 CellSize = _buildingData.CellSize;
@@ -52,7 +52,7 @@ void ARTS_BuildPreview::InitMeshAndCollider()
 			buildingBounds.Y = Max.Y + (CellSize - static_cast<int>(Max.Y) % CellSize);
 		}
 		buildingBounds.Z *= .5f;
-		BoxCollider->SetBoxExtent(buildingBounds);
+		// BoxCollider->SetBoxExtent(buildingBounds);*/
 	}
 }
 

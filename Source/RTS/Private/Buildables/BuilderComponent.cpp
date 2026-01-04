@@ -51,7 +51,7 @@ void UBuilderComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	{
 		RoadPreviewActor->ClearPreview();
 		const FVector targetLocation = SnapToGrid(player->TraceMouseToLandscape());
-		RoadPreviewActor->AddPreviewInstance(targetLocation, FRotator::ZeroRotator, ValidatePlacement(targetLocation, FVector(CellSize * .4, CellSize * .4, 0.5f)));
+		RoadPreviewActor->AddPreviewInstance(targetLocation, FRotator::ZeroRotator, ValidatePlacement(targetLocation, FVector(CellSize * .4, CellSize * .4, 10.f)));
 	}
 }
 
@@ -146,7 +146,7 @@ FVector UBuilderComponent::SnapToGrid(const FVector& WorldLocation) const
 	FVector retVal = FVector();
 	retVal.X = FMath::Floor(WorldLocation.X / CellSize) * CellSize;
 	retVal.Y = FMath::Floor(WorldLocation.Y / CellSize) * CellSize;
-	retVal.Z = WorldLocation.Z;
+	retVal.Z = 0;
 	return retVal;
 }
 
@@ -242,6 +242,12 @@ void UBuilderComponent::Road_Deploy()
 	if (RoadPreviewActor)
 		RoadPreviewActor->ClearPreview();
 
+	if (!IsRoadValid())
+	{
+		bPlaceRoad = false;
+		return;~
+	}
+
 	// Spawn actual road actor instead
 	if (ARoad* road = WorldContext->SpawnActor<ARoad>(Road_Class.LoadSynchronous(), Road_StartPosition, FRotator::ZeroRotator))
 	{
@@ -264,8 +270,6 @@ void UBuilderComponent::Road_BuildCancel()
 
 	if (RoadPreviewActor)
 		RoadPreviewActor->ClearPreview();
-
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("Cancel build road")));
 }
 
 bool UBuilderComponent::ValidatePlacement(const FVector& InLocation, const FVector& InObjectSize, AActor* IgnoredActor) const
@@ -273,9 +277,8 @@ bool UBuilderComponent::ValidatePlacement(const FVector& InLocation, const FVect
 	FCollisionQueryParams queryParams;
 	queryParams.AddIgnoredActor(IgnoredActor);
 
-	// TODO: Add slope and height difference validation
-	// Add trace to the bottom 
 	const bool bPlaceable = !WorldContext->OverlapAnyTestByChannel(InLocation + FVector::UpVector, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeBox(InObjectSize), queryParams);
+	UKismetSystemLibrary::DrawDebugBox(GetWorld(), InLocation, InObjectSize, FLinearColor::Blue, FRotator::ZeroRotator, 0, 1.f);
 
 	return bPlaceable;
 }
@@ -286,12 +289,23 @@ void UBuilderComponent::CreateRoadPreviewTiles(const FVector& Start, const FVect
 	{
 		FVector targetLocation = Start + Direction * (i * CellSize);
 		FRotator targetRotation = UKismetMathLibrary::FindLookAtRotation(targetLocation, targetLocation + Direction * CellSize);
-		const bool IsValidPoint = ValidatePlacement(targetLocation, FVector(CellSize * .4f, CellSize * .4f, 0.5f));
+		const bool IsValidPoint = ValidatePlacement(targetLocation, FVector(CellSize * .4f, CellSize * .4f, 10.f));
 
 		RoadPoints.Add(FRoadCell(targetLocation, targetRotation, IsValidPoint));
 		if (RoadPreviewActor)
 			RoadPreviewActor->AddPreviewInstance(targetLocation, targetRotation, IsValidPoint);
 	}
+}
+
+bool UBuilderComponent::IsRoadValid()
+{
+	int32 ValidTiles = 0;
+	for (const FRoadCell& Cell : RoadPoints)
+	{
+		if (Cell.bIsValid)
+			ValidTiles++;
+	}
+	return ValidTiles > 0;
 }
 
 void UBuilderComponent::LoadObjectData(FArchive& Ar)
