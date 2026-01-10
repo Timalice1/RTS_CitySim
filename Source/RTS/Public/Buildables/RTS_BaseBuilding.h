@@ -30,7 +30,4 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
 	TObjectPtr<class UStaticMeshComponent> BuildingMesh = nullptr;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
-	TObjectPtr<class UBoxComponent> BoxCollider = nullptr;
 };

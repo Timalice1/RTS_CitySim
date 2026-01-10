@@ -50,8 +50,6 @@ private: // Internal
 protected: // Components
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
 	TObjectPtr<class UStaticMeshComponent> BuildingMesh = nullptr;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
-	TObjectPtr<class UBoxComponent> BoxCollider = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Config)
 	TSoftObjectPtr<class UMaterialInstance> OverlayPreviewMaterial;

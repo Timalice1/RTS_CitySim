@@ -10,16 +10,10 @@ ARTS_BuildPreview::ARTS_BuildPreview()
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 
-	// Setup box collider
-	BoxCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
-	RootComponent = BoxCollider;
-	BoxCollider->bHiddenInGame = false;
-	BoxCollider->SetGenerateOverlapEvents(true);
-
 	// Setup building mesh component
 	BuildingMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	BuildingMesh->SetupAttachment(RootComponent);
-	BuildingMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	BuildingMesh->SetCollisionProfileName(TEXT("BlockAll"));
 }
 
 void ARTS_BuildPreview::InitBuilding(const FBuildingData& BuildingData)
@@ -31,7 +25,7 @@ void ARTS_BuildPreview::InitBuilding(const FBuildingData& BuildingData)
 
 void ARTS_BuildPreview::InitMeshAndCollider()
 {
-	if (!BuildingMesh || !BoxCollider)
+	if (!BuildingMesh)
 		return;
 
 	if (UStaticMesh* meshComplete = _buildingData.BuildingMesh_Complete.LoadSynchronous())
