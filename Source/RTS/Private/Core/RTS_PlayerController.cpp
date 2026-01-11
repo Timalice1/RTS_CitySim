@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UI/RTS_HUD.h"
 #include "Buildables/BuilderComponent.h"
+#include "Core/Interfaces/SelectableInterface.h"
 #include "SaveGame/SaveGameSubsystem.h"
 #include "SaveGame/RTS_SaveGame.h"
 
@@ -77,6 +78,8 @@ void ARTS_PlayerController::SetupInputComponent()
 		Input->BindAction(InputActions.BuildRoad, ETriggerEvent::Triggered, this, &ThisClass::BuildRoadPending);
 		Input->BindAction(InputActions.BuildRoad, ETriggerEvent::Completed, this, &ThisClass::BuildRoadCompleted);
 		Input->BindAction(InputActions.CancelBuildRoad, ETriggerEvent::Started, this, &ThisClass::BuildRoadCancel);
+
+		Input->BindAction(InputActions.Select, ETriggerEvent::Triggered, this, &ThisClass::Select);
 	}
 }
 
@@ -160,6 +163,31 @@ void ARTS_PlayerController::BuildRoadCancel(const FInputActionInstance& ActionIn
 		BuilderComp->Road_BuildCancel();
 }
 
+void ARTS_PlayerController::Select(const FInputActionInstance& ActionInstance)
+{
+	FHitResult hit;
+
+	// Clear current selection
+	if (_currentSelection)
+	{
+		if (ISelectableInterface* selectable = Cast<ISelectableInterface>(_currentSelection))
+			selectable->Deselect();
+		_currentSelection = nullptr;
+	}
+
+	if (GetHitResultUnderCursor(ECC_Visibility, false, hit))
+	{
+		if (AActor* actor = hit.GetActor())
+		{
+			if (ISelectableInterface* selectable = Cast<ISelectableInterface>(actor))
+			{
+				selectable->Select();
+				_currentSelection = actor;
+			}
+		}
+	}
+}
+
 void ARTS_PlayerController::BuildRoadCompleted(const FInputActionInstance& ActionInstance)
 {
 	if (BuilderComp)
@@ -207,17 +235,6 @@ void ARTS_PlayerController::Handle_GameLoaded(URTS_SaveGame* SaveGameObject)
 		SaveSubsystem->DeserializeObject(GetComponentByClass(componentData.componentClass), componentData.bytes);
 }
 
-AActor* ARTS_PlayerController::GetActorUnderCursor()
-{
-	FHitResult hit;
-
-	if (GetHitResultUnderCursorByChannel(InteractibleTraceChannel, false, hit))
-	{
-		if (AActor* hitActor = hit.GetActor())
-			return hitActor;
-	}
-	return nullptr;
-}
 
 FVector ARTS_PlayerController::TraceMouseToLandscape() const
 {

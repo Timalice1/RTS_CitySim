@@ -1,9 +1,13 @@
 #include "Buildables/RTS_BuildPreview.h"
 #include "Buildables/BuildingData.h"
 #include "Components/StaticMeshComponent.h"
-#include "Components/BoxComponent.h"
+#include "Components/WidgetComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Materials/MaterialInstance.h"
+#include "UI/Buildables/Building_InteractionPanel.h"
+#include "UI/Generic/G_TextBlock.h"
+#include "UI/Generic/InteractionPanelWidget.h"
 
 ARTS_BuildPreview::ARTS_BuildPreview()
 {
@@ -14,20 +18,34 @@ ARTS_BuildPreview::ARTS_BuildPreview()
 	BuildingMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	BuildingMesh->SetupAttachment(RootComponent);
 	BuildingMesh->SetCollisionProfileName(TEXT("BlockAll"));
+
+	InteractionPanelWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractionPanelWidgetComponent"));
+	InteractionPanelWidget->SetupAttachment(BuildingMesh);
+	InteractionPanelWidget->SetWidgetSpace(EWidgetSpace::Screen);
+	InteractionPanelWidget->SetDrawAtDesiredSize(true);
 }
 
-void ARTS_BuildPreview::InitBuilding(const FBuildingData& BuildingData)
+void ARTS_BuildPreview::BeginPlay()
+{
+	Super::BeginPlay();
+	InteractionPanelWidget->SetVisibility(false);
+}
+
+void ARTS_BuildPreview::Init(const FBuildingData& BuildingData)
 {
 	_buildingData = BuildingData;
-	InitMeshAndCollider();
+	InitBuilding();
+	
+	// Apply preview validation overlay material to the mesh
 	ApplyOverlay();
 }
 
-void ARTS_BuildPreview::InitMeshAndCollider()
+void ARTS_BuildPreview::InitBuilding()
 {
 	if (!BuildingMesh)
 		return;
 
+	// Init mesh and mesh bounds
 	if (UStaticMesh* meshComplete = _buildingData.BuildingMesh_Complete.LoadSynchronous())
 	{
 		BuildingMesh->SetStaticMesh(meshComplete);
@@ -45,7 +63,17 @@ void ARTS_BuildPreview::InitMeshAndCollider()
 			buildingBounds.X = Max.X + (CellSize - static_cast<int>(Max.X) % CellSize);
 			buildingBounds.Y = Max.Y + (CellSize - static_cast<int>(Max.Y) % CellSize);
 		}
-		//buildingBounds.Z *= .5f;
+	}
+
+	// Initialize interaction panel widget
+	if (TSubclassOf<UInteractionPanelWidget> interactionPanelClass = InteractionPanelWidgetClass.LoadSynchronous())
+	{
+		if (UBuilding_InteractionPanel* interactionPanel = Cast<UBuilding_InteractionPanel>(CreateWidget(UGameplayStatics::GetPlayerController(GetWorld(), 0), interactionPanelClass)))
+		{
+			interactionPanel->Title->SetText(_buildingData.Title);
+			interactionPanel->OnDestroyButtonClicked.BindUObject(this, &ThisClass::HandleCancelBuild);
+			InteractionPanelWidget->SetWidget(interactionPanel);
+		}
 	}
 }
 
@@ -69,6 +97,12 @@ void ARTS_BuildPreview::StartBuild()
 	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
 	// Disable overlay material
 	BuildingMesh->SetOverlayMaterial(nullptr);
+}
+
+void ARTS_BuildPreview::HandleCancelBuild()
+{
+	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
+	Destroy();
 }
 
 void ARTS_BuildPreview::UpdateBuildingProgress()
@@ -95,9 +129,10 @@ void ARTS_BuildPreview::UpdateBuildingProgress()
 	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), _buildProgress), NULL, FLinearColor::Yellow);
 
 	// TODO: Save building progress, restore progress on load
-	_durabilityCurrent += .1f;
+	_durabilityCurrent += 1.f;
 	_buildProgress = _durabilityCurrent / _buildingData.MaxDurability;
 }
+
 
 void ARTS_BuildPreview::SetIsPlaceable(bool bIsPlaceable)
 {
@@ -109,8 +144,17 @@ void ARTS_BuildPreview::SaveObjectData(FArchive& Ar) {}
 
 void ARTS_BuildPreview::LoadObjectData(FArchive& Ar)
 {
-	InitMeshAndCollider();
+	InitBuilding();
 	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
+}
+
+void ARTS_BuildPreview::Select()
+{
+	InteractionPanelWidget->SetVisibility(true);
+}
+void ARTS_BuildPreview::Deselect()
+{
+	InteractionPanelWidget->SetVisibility(false);
 }
 
 void ARTS_BuildPreview::EndBuild()

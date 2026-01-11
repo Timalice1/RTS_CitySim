@@ -21,10 +21,6 @@ public:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
 
-	/* Returns clicked actor under cursor*/
-	UFUNCTION(BlueprintCallable, Category = "RTS_PlayerController|Misc")
-	AActor* GetActorUnderCursor();
-
 	/* Perform a single line trace, using custom Landscape channel. Return hit location res*/
 	UFUNCTION(BlueprintCallable, Category = "RTS_PlayerController|Misc")
 	FVector TraceMouseToLandscape() const;
@@ -78,11 +74,14 @@ private: // Input actions listeners
 	void BuildCancel(const FInputActionInstance& ActionInstance);
 	void RotateBuilding(const FInputActionInstance& ActionInstance);
 
+	// Road building inputs
 	void BuildRoadStart(const FInputActionInstance& ActionInstance);
 	void BuildRoadPending(const FInputActionInstance& ActionInstance);
 	void BuildRoadCompleted(const FInputActionInstance& ActionInstance);
 	void BuildRoadCancel(const FInputActionInstance& ActionInstance);
 
+	void Select(const FInputActionInstance& ActionInstance);
+	
 protected: // Internal
 
 	/*Callback from BuilderComponent*/
@@ -124,6 +123,8 @@ private:
 	bool bCameraZoomEnabled = true;
 	/* Should camera rotate? */
 	bool bCameraRotationEnabled = false;
+	
+	AActor* _currentSelection = nullptr;
 
 #pragma endregion
 };

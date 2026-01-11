@@ -29,7 +29,10 @@ struct FInputActions
 	TObjectPtr<UInputAction> HoldRotate = nullptr;
 	UPROPERTY(EditDefaultsOnly, Category = Camera)
 	TObjectPtr<UInputAction> ZoomCamera = nullptr;
-
+	
+	UPROPERTY(EditDefaultsOnly, Category = Selection)
+	TObjectPtr<UInputAction> Select = nullptr;
+	
 	// Buildings system input actions
 	UPROPERTY(EditDefaultsOnly, Category = BuildingsSystem)
 	TObjectPtr<UInputAction> BuildDeploy = nullptr;

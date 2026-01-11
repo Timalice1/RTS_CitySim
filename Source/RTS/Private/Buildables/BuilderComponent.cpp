@@ -72,7 +72,7 @@ void UBuilderComponent::EnterBuildMode(const FBuildingData& BuildingData)
 	{
 		FBuildingData buildData = BuildingData;
 		buildData.CellSize = CellSize;
-		BuildPreviewActor->InitBuilding(buildData);
+		BuildPreviewActor->Init(buildData);
 		OnBuildModeEnter.Broadcast();
 		bIsBuildMode = true;
 
@@ -100,7 +100,7 @@ void UBuilderComponent::BuildDeploy()
 			BuildPreviewActor->GetActorLocation() - FVector::UpVector * PreviewBuildFloatHeight,
 			BuildPreviewActor->GetActorRotation()))
 		{
-			build->InitBuilding(BuildPreviewActor->GetBuildingData());
+			build->Init(BuildPreviewActor->GetBuildingData());
 			build->OnBuildCompleted.AddDynamic(this, &ThisClass::HandleBuildCompleted);
 			build->StartBuild();
 		}
@@ -162,7 +162,6 @@ void UBuilderComponent::HandleBuildCompleted(ARTS_BuildPreview* PreviewActor)
 			buildingClass, PreviewActor->GetActorTransform()))
 			build->Init(buildData);
 	}
-
 	URTS_HUD_Library::PushNotification(player, FString::Printf(TEXT("%s: Build completed"), *buildData.Title.ToString()), TEXT("Success"));
 
 	PreviewActor->Destroy();

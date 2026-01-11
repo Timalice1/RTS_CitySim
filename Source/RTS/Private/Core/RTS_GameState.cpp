@@ -32,8 +32,6 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 		if (!actor || !actor->Implements<USaveableInterface>())
 			continue;
 
-
-
 		FActorSaveDataRecord saveRecord;
 		saveRecord.ActorClass = actor->GetClass();
 		saveRecord.ActorName = actor->GetName();

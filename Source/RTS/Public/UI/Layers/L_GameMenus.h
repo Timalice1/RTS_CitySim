@@ -20,13 +20,16 @@ class RTS_API UL_GameMenus : public UUserWidget
 public:
 	virtual void NativeConstruct() override;
 
+	/// Collapse active menu panel widget
 	UFUNCTION(BlueprintCallable, Category = GameMenusLayer)
 	virtual bool CloseActivePanel();
 
 	UFUNCTION(BlueprintCallable, Category = GameMenusLayer)
 	virtual void ToggleBuildingsPanel();
 
-protected:
+
+protected: // Menu panels
+	// List of buildings
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UG_MenuPanel> BuildingsMenuPanel = nullptr;
 
@@ -34,6 +37,7 @@ private:
 	UFUNCTION()
 	virtual void HandleBuildMenuVisibilityChanged(ESlateVisibility InVisibility);
 
+	/// Generic function to toggle on/off menu panels
 	UFUNCTION()
 	virtual void TogglePanel(UUserWidget* TargetWidget);
 
