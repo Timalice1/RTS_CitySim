@@ -7,6 +7,12 @@
 
 DEFINE_LOG_CATEGORY(LogRTSGameState);
 
+ARTS_GameState::ARTS_GameState()
+{
+	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bStartWithTickEnabled = false;
+}
+
 void ARTS_GameState::BeginPlay()
 {
 	Super::BeginPlay();
@@ -25,19 +31,27 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 	if (!SaveGameObject)
 		return;
 	
+	// Clean up currently saved actors
 	SaveGameObject->WorldActorsRecords.Empty();
+
+	// Iterate through each actor on the scene 
 	for (FActorIterator It(WorldContext); It; ++It)
 	{
+		// Filter actors by saveable interface
 		AActor* actor = *It;
 		if (!actor || !actor->Implements<USaveableInterface>())
 			continue;
 
+		// For each saveable actor, create a save record to serialize to binary
 		FActorSaveDataRecord saveRecord;
 		saveRecord.ActorClass = actor->GetClass();
 		saveRecord.ActorName = actor->GetName();
 		saveRecord.ActorTransform = actor->GetActorTransform();
+		// Run internal actor serialization logic
+		// Used for saving custom actor specific stuff, that cannot be exposed to UPROPERTY(SaveGame)
 		saveRecord.ByteData = GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->SerializeObject(actor);
 
+		// Write this record to the file for serialization
 		SaveGameObject->WorldActorsRecords.Add(saveRecord);
 		UE_LOG(LogRTSGameState, Warning, TEXT("SAVED: %s"), *actor->GetName())
 	}

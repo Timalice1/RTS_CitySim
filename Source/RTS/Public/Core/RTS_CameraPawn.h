@@ -24,18 +24,18 @@ protected: // Components
 	TObjectPtr<class UFloatingPawnMovement> PawnMovementComponent = nullptr;
 
 protected: // Parameters
-	UPROPERTY(EditDefaultsOnly, Category = PawnCfg)
+	UPROPERTY(EditDefaultsOnly, Category = CameraPawn)
 	float CamRotationSpeed = 1.f;
 
-	UPROPERTY(EditDefaultsOnly, Category = "PawnCfg|Zoom")
+	UPROPERTY(EditDefaultsOnly, Category = "CameraPawn|Zoom")
 	float ZoomSpeed = 20.f;
-	UPROPERTY(EditDefaultsOnly, Category = "PawnCfg|Zoom")
+	UPROPERTY(EditDefaultsOnly, Category = "CameraPawn|Zoom")
 	float MinHeight = 200.f;
-	UPROPERTY(EditDefaultsOnly, Category = "PawnCfg|Zoom")
+	UPROPERTY(EditDefaultsOnly, Category = "CameraPawn|Zoom")
 	float MaxHeight = 3000.f;
-	UPROPERTY(EditDefaultsOnly, Category = "PawnCfg|Zoom")
+	UPROPERTY(EditDefaultsOnly, Category = "CameraPawn|Zoom")
 	float TiltMin = -90.f;
-	UPROPERTY(EditDefaultsOnly, Category = "PawnCfg|Zoom")
+	UPROPERTY(EditDefaultsOnly, Category = "CameraPawn|Zoom")
 	float TiltMax = 0.f;
 
 public:

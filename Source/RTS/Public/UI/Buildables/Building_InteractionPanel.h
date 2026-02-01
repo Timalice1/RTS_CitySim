@@ -6,7 +6,7 @@
 
 DECLARE_DELEGATE(FOnDestroyButtonClickedEvent);
 
-UCLASS()
+UCLASS(Abstract)
 class RTS_API UBuilding_InteractionPanel : public UInteractionPanelWidget
 {
 	GENERATED_BODY()
@@ -17,6 +17,7 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UButton> DestroyButton = nullptr;
+ 
  
 	FOnDestroyButtonClickedEvent OnDestroyButtonClicked;
 	

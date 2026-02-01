@@ -34,17 +34,15 @@ void ARTS_PlayerController::BeginPlay()
 	verify((SaveSubsystem = GetGameInstance()->GetSubsystem<USaveGameSubsystem>()) != nullptr);
 	SaveSubsystem->OnSaveGameRequested.AddDynamic(this, &ThisClass::Handle_SaveRequested);
 	SaveSubsystem->OnSaveLoaded.AddDynamic(this, &ThisClass::Handle_GameLoaded);
-
-	// UKismetSystemLibrary::ExecuteConsoleCommand(GetWorld(), TEXT("stat unit"), this);
-	UKismetSystemLibrary::ExecuteConsoleCommand(GetWorld(), TEXT("stat fps"), this);
-	UKismetSystemLibrary::ExecuteConsoleCommand(GetWorld(), TEXT("t.MaxFPS 200"), this);
 }
 
 void ARTS_PlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+	
 	// Cache references to a controlled pawn and InputSubsystem
-	verify((_controlledPawn = Cast<ARTS_CameraPawn>(InPawn)) != nullptr);
+	if (ARTS_CameraPawn* possessedPawn = Cast<ARTS_CameraPawn>(InPawn))
+		_controlledPawn = possessedPawn;
 	verify((InputSystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>()) != nullptr);
 
 	// Setup default input mapping context

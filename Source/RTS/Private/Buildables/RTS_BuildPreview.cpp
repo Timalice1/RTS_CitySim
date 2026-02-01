@@ -2,9 +2,12 @@
 #include "Buildables/BuildingData.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
+#include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Managers/TasksManagerSubsystem.h"
 #include "Materials/MaterialInstance.h"
+#include "Tasks/Task.h"
 #include "UI/Buildables/Building_InteractionPanel.h"
 #include "UI/Generic/G_TextBlock.h"
 #include "UI/Generic/InteractionPanelWidget.h"
@@ -35,7 +38,7 @@ void ARTS_BuildPreview::Init(const FBuildingData& BuildingData)
 {
 	_buildingData = BuildingData;
 	InitBuilding();
-	
+
 	// Apply preview validation overlay material to the mesh
 	ApplyOverlay();
 }
@@ -90,11 +93,19 @@ void ARTS_BuildPreview::ApplyOverlay()
 
 void ARTS_BuildPreview::StartBuild()
 {
-	_durabilityCurrent = 0.f;
-	_buildProgress = 0.f;
+	// Create and configure new task
+	if (UTask* newTask = NewObject<UTask>(this))
+	{
+		newTask->TaskName = FName("Building");
+		newTask->TaskLocation = GetActorLocation();
+		newTask->MaxWork = _buildingData.MaxDurability;
+		newTask->OnTaskCompletedEvent.AddUObject(this, &ThisClass::EndBuild);
+		newTask->OnProgressChanged.BindUObject(this, &ThisClass::UpdateBuildingProgress);
+		
+		GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->AddTask(newTask);
+		newTask->RunTask();
+	}
 
-	// TODO: Create new task in the tasks manager
-	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
 	// Disable overlay material
 	BuildingMesh->SetOverlayMaterial(nullptr);
 }
@@ -105,32 +116,27 @@ void ARTS_BuildPreview::HandleCancelBuild()
 	Destroy();
 }
 
-void ARTS_BuildPreview::UpdateBuildingProgress()
+void ARTS_BuildPreview::UpdateBuildingProgress(const float InProgress)
 {
 	if (!BuildingMesh)
 		return;
 
-	if (_buildProgress >= 1)
+	if (InProgress >= 1)
 	{
 		if (UStaticMesh* completeMesh = _buildingData.BuildingMesh_Complete.LoadSynchronous())
 			BuildingMesh->SetStaticMesh(completeMesh);
 		EndBuild();
+		return;
 	}
-	else
+
+	int32 progressMeshIndex = FMath::Floor(InProgress * _buildingData.BuildingMesh_Stages.Num());
+	if (_buildingData.BuildingMesh_Stages.IsValidIndex(progressMeshIndex))
 	{
-		int32 progressMeshIndex = FMath::Floor(_buildProgress * _buildingData.BuildingMesh_Stages.Num());
-		if (_buildingData.BuildingMesh_Stages.IsValidIndex(progressMeshIndex))
-		{
-			if (UStaticMesh* progressMesh = _buildingData.BuildingMesh_Stages[progressMeshIndex].LoadSynchronous())
-				BuildingMesh->SetStaticMesh(progressMesh);
-		}
+		if (UStaticMesh* progressMesh = _buildingData.BuildingMesh_Stages[progressMeshIndex].LoadSynchronous())
+			BuildingMesh->SetStaticMesh(progressMesh);
 	}
 
-	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), _buildProgress), NULL, FLinearColor::Yellow);
-
-	// TODO: Save building progress, restore progress on load
-	_durabilityCurrent += 1.f;
-	_buildProgress = _durabilityCurrent / _buildingData.MaxDurability;
+	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), InProgress), NULL, FLinearColor::Yellow, .01f);
 }
 
 
@@ -145,13 +151,14 @@ void ARTS_BuildPreview::SaveObjectData(FArchive& Ar) {}
 void ARTS_BuildPreview::LoadObjectData(FArchive& Ar)
 {
 	InitBuilding();
-	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
+	// 	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
 }
 
 void ARTS_BuildPreview::Select()
 {
 	InteractionPanelWidget->SetVisibility(true);
 }
+
 void ARTS_BuildPreview::Deselect()
 {
 	InteractionPanelWidget->SetVisibility(false);
@@ -159,6 +166,5 @@ void ARTS_BuildPreview::Deselect()
 
 void ARTS_BuildPreview::EndBuild()
 {
-	GetWorld()->GetTimerManager().ClearTimer(_buildTimer);
 	OnBuildCompleted.Broadcast(this);
 }

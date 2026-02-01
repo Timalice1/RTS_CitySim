@@ -31,6 +31,9 @@ struct FBuildingData : public FTableRowBase
 	/// Preview meshes stages, used in building progression updating
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, SaveGame, Category = Meshes)
 	TArray<TSoftObjectPtr<class UStaticMesh>> BuildingMesh_Stages;
+	
+	UPROPERTY(SaveGame, EditDefaultsOnly, BlueprintReadOnly, Category = BuildingConfig)
+	float BuildingProgressionSpeed = .1f;
 
 	// Cell size of the world grid. Set during building initialization
 	UPROPERTY(SaveGame)

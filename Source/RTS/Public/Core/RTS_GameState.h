@@ -16,8 +16,9 @@ class RTS_API ARTS_GameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
+	ARTS_GameState();
 	virtual void BeginPlay() override;
-
+	
 private:
 	UPROPERTY()
 	UWorld* WorldContext = nullptr;

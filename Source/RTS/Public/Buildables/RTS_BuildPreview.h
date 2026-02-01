@@ -4,7 +4,6 @@
 #include "GameFramework/Actor.h"
 #include "Buildables/BuildingData.h"
 #include "Core/Interfaces/SelectableInterface.h"
-#include "rapidjson/internal/meta.h"
 #include "SaveGame/SaveableInterface.h"
 #include "RTS_BuildPreview.generated.h"
 
@@ -19,7 +18,7 @@ public:
 	ARTS_BuildPreview();
 
 	virtual void BeginPlay() override;
-	
+
 	/// Init build data, building mesh and collider
 	UFUNCTION(BlueprintCallable, Category = Buildable)
 	virtual void Init(const struct FBuildingData& BuildingData);
@@ -53,8 +52,9 @@ public:
 private: // Internal
 	// Finish building process
 	virtual void EndBuild();
+
 	// Updates build process - update mesh and progress
-	virtual void UpdateBuildingProgress();
+	virtual void UpdateBuildingProgress(const float InProgress);
 
 	virtual void InitBuilding();
 
@@ -83,16 +83,7 @@ private: // Internal data
 	class UMaterialInstanceDynamic* _overlayMaterial = nullptr;
 
 	UPROPERTY(SaveGame)
-	FTimerHandle _buildTimer;
-
-	UPROPERTY(SaveGame)
-	float _buildProgress = 0.f;
-
-	UPROPERTY(SaveGame)
 	FBuildingData _buildingData;
-
-	UPROPERTY(SaveGame)
-	float _durabilityCurrent = 0.f;
 
 	FVector buildingBounds;
 };
