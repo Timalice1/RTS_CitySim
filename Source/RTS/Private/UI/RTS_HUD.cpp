@@ -1,5 +1,6 @@
 #include "UI/RTS_HUD.h"
 #include "GameFramework/Actor.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/Layers/L_GameMenus.h"
 #include "UI/Layers/L_Modals.h"
 #include "UI/Layers/L_Menus.h"
@@ -49,4 +50,7 @@ void ARTS_HUD::TogglePauseMenu()
 			layer->SetVisibility(bPauseMenuOpened ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
 		
 	}
+	
+	// Pause game
+	UGameplayStatics::SetGlobalTimeDilation(GetWorld(), bPauseMenuOpened ? 0 : 1);
 }
