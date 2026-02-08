@@ -47,5 +47,6 @@ void ARTS_HUD::TogglePauseMenu()
 	{
 		if (layer != MenusLayer_Widget)
 			layer->SetVisibility(bPauseMenuOpened ? ESlateVisibility::Collapsed : ESlateVisibility::SelfHitTestInvisible);
+		
 	}
 }

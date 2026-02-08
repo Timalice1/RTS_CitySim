@@ -17,7 +17,7 @@ struct FActorSaveDataRecord
 	UClass* ActorClass;
 
 	UPROPERTY(SaveGame)
-	FTransform ActorTransform;
+	FTransform ActorTransform = FTransform();
 
 	UPROPERTY(SaveGame)
 	TArray<uint8> ByteData;
@@ -36,6 +36,15 @@ struct FComponentSaveDataRecord
 	TArray<uint8> bytes;
 };
 
+USTRUCT()
+struct FObjectSaveDataRecord
+{
+	GENERATED_BODY()
+
+	UPROPERTY(SaveGame)
+	TArray<uint8> bytes;
+};
+
 /// Default save game object, used for saving game-specific data
 UCLASS(Abstract)
 class RTS_API URTS_SaveGame : public USaveGame
@@ -47,5 +56,8 @@ public:
 	TArray<FActorSaveDataRecord> WorldActorsRecords;
 
 	UPROPERTY()
-	TArray<FComponentSaveDataRecord> componentsData;
+	TArray<FComponentSaveDataRecord> ComponentsData;
+
+	UPROPERTY()
+	TArray<FObjectSaveDataRecord> ObjectsData;
 };

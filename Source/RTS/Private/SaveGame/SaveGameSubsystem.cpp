@@ -43,8 +43,10 @@ TArray<uint8> USaveGameSubsystem::SerializeObject(UObject* Target)
 	Ar.ArIsSaveGame = true;
 	Target->Serialize(Ar);
 
+	// Used for saving custom actor-specific stuff, that cannot be exposed to UPROPERTY(SaveGame)
 	if (ISaveableInterface* saveable = Cast<ISaveableInterface>(Target))
 		saveable->SaveObjectData(Ar);
+	
 	return bytes;
 }
 
@@ -55,6 +57,7 @@ void USaveGameSubsystem::DeserializeObject(UObject* Target, TArray<uint8> bytes)
 	Ar.ArIsSaveGame = true;
 	Target->Serialize(Ar);
 
+	// Used for loading custom actor-specific stuff, that cannot be exposed to UPROPERTY(SaveGame)
 	if (ISaveableInterface* saveable = Cast<ISaveableInterface>(Target))
 		saveable->LoadObjectData(Ar);
 }

@@ -32,6 +32,7 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 		return;
 	
 	// Clean up currently saved actors
+	// TODO: Remove only dirty actors instead
 	SaveGameObject->WorldActorsRecords.Empty();
 
 	// Iterate through each actor on the scene 
@@ -47,8 +48,9 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 		saveRecord.ActorClass = actor->GetClass();
 		saveRecord.ActorName = actor->GetName();
 		saveRecord.ActorTransform = actor->GetActorTransform();
+		
 		// Run internal actor serialization logic
-		// Used for saving custom actor specific stuff, that cannot be exposed to UPROPERTY(SaveGame)
+		// Serialize fields, marked as UPROPERTY(SaveGame)
 		saveRecord.ByteData = GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->SerializeObject(actor);
 
 		// Write this record to the file for serialization

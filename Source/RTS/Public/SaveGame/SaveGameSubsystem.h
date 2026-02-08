@@ -25,8 +25,7 @@ public:
 	/// Forcing async save loading from specific slot
 	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	virtual void Request_LoadGame(const FString& fromSlot);
-
-
+	
 	/// Serializes target object into bytes array
 	UFUNCTION(BlueprintCallable, Category = SaveGameSubsystem)
 	TArray<uint8> SerializeObject(UObject* Target);

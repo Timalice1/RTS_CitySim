@@ -10,7 +10,9 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBuildFinishedEvent, class ARTS_BuildPreview*, PreviewActor);
 
 UCLASS(Abstract)
-class RTS_API ARTS_BuildPreview : public AActor, public ISaveableInterface, public ISelectableInterface
+class RTS_API ARTS_BuildPreview : public AActor,
+                                  public ISaveableInterface,
+                                  public ISelectableInterface
 {
 	GENERATED_BODY()
 
@@ -52,6 +54,9 @@ public:
 private: // Internal
 	// Finish building process
 	virtual void EndBuild();
+	
+	UFUNCTION()
+	virtual void Handle_TaskCompleted(const class UTask *Task);
 
 	// Updates build process - update mesh and progress
 	virtual void UpdateBuildingProgress(const float InProgress);
@@ -84,6 +89,9 @@ private: // Internal data
 
 	UPROPERTY(SaveGame)
 	FBuildingData _buildingData;
+
+	UPROPERTY(SaveGame)
+	FGuid _buildingTask;
 
 	FVector buildingBounds;
 };

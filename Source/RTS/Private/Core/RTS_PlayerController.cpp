@@ -223,13 +223,13 @@ void ARTS_PlayerController::Handle_SaveRequested(URTS_SaveGame* SaveGameObject)
 		FComponentSaveDataRecord newRecord;
 		newRecord.componentClass = component->GetClass();
 		newRecord.bytes = SaveSubsystem->SerializeObject(component);
-		SaveGameObject->componentsData.Add(newRecord);
+		SaveGameObject->ComponentsData.Add(newRecord);
 	}
 }
 
 void ARTS_PlayerController::Handle_GameLoaded(URTS_SaveGame* SaveGameObject)
 {
-	for (FComponentSaveDataRecord& componentData : SaveGameObject->componentsData)
+	for (FComponentSaveDataRecord& componentData : SaveGameObject->ComponentsData)
 		SaveSubsystem->DeserializeObject(GetComponentByClass(componentData.componentClass), componentData.bytes);
 }
 

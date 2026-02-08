@@ -94,16 +94,16 @@ void ARTS_BuildPreview::ApplyOverlay()
 void ARTS_BuildPreview::StartBuild()
 {
 	// Create and configure new task
-	if (UTask* newTask = NewObject<UTask>(this))
+	if (UTask* task = NewObject<UTask>())
 	{
-		newTask->TaskName = FName("Building");
-		newTask->TaskLocation = GetActorLocation();
-		newTask->MaxWork = _buildingData.MaxDurability;
-		newTask->OnTaskCompletedEvent.AddUObject(this, &ThisClass::EndBuild);
-		newTask->OnProgressChanged.BindUObject(this, &ThisClass::UpdateBuildingProgress);
+		task->TaskName = FName("Building");
+		task->TaskLocation = GetActorLocation();
+		task->MaxWork = _buildingData.MaxDurability;
+		_buildingTask = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(task);
 		
-		GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->AddTask(newTask);
-		newTask->RunTask();
+		task->OnTaskCompletedEvent.AddUObject(this, &ThisClass::Handle_TaskCompleted);
+		task->OnProgressChanged.BindUObject(this, &ThisClass::UpdateBuildingProgress);
+		task->RunTask();
 	}
 
 	// Disable overlay material
@@ -129,7 +129,7 @@ void ARTS_BuildPreview::UpdateBuildingProgress(const float InProgress)
 		return;
 	}
 
-	int32 progressMeshIndex = FMath::Floor(InProgress * _buildingData.BuildingMesh_Stages.Num());
+	const int32 progressMeshIndex = FMath::Floor(InProgress * _buildingData.BuildingMesh_Stages.Num());
 	if (_buildingData.BuildingMesh_Stages.IsValidIndex(progressMeshIndex))
 	{
 		if (UStaticMesh* progressMesh = _buildingData.BuildingMesh_Stages[progressMeshIndex].LoadSynchronous())
@@ -138,7 +138,6 @@ void ARTS_BuildPreview::UpdateBuildingProgress(const float InProgress)
 
 	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), InProgress), NULL, FLinearColor::Yellow, .01f);
 }
-
 
 void ARTS_BuildPreview::SetIsPlaceable(bool bIsPlaceable)
 {
@@ -151,7 +150,12 @@ void ARTS_BuildPreview::SaveObjectData(FArchive& Ar) {}
 void ARTS_BuildPreview::LoadObjectData(FArchive& Ar)
 {
 	InitBuilding();
-	// 	GetWorld()->GetTimerManager().SetTimer(_buildTimer, this, &ThisClass::UpdateBuildingProgress, GetWorld()->GetDeltaSeconds(), true, 0);
+	if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->GetTaskByID(_buildingTask))
+	{
+		task->OnTaskCompletedEvent.AddUObject(this, &ThisClass::Handle_TaskCompleted);
+		task->OnProgressChanged.BindUObject(this, &ThisClass::UpdateBuildingProgress);
+		task->RunTask();
+	}
 }
 
 void ARTS_BuildPreview::Select()
@@ -167,4 +171,9 @@ void ARTS_BuildPreview::Deselect()
 void ARTS_BuildPreview::EndBuild()
 {
 	OnBuildCompleted.Broadcast(this);
+}
+
+void ARTS_BuildPreview::Handle_TaskCompleted(const class UTask* Task)
+{
+	EndBuild();
 }

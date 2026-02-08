@@ -3,9 +3,7 @@
 UWorld* UTask::GetWorld() const
 {
 	if (GIsEditor)
-	{
 		return GWorld;
-	}
 	return GetOuter()->GetWorld();
 }
 
@@ -26,4 +24,7 @@ void UTask::UpdateTaskProgress(/*const float InProgressPointsAmount*/)
 	TaskProgress = WorkCurrent / MaxWork;
 
 	OnProgressChanged.ExecuteIfBound(TaskProgress);
+
+	if (TaskProgress >= 1)
+		OnTaskCompletedEvent.Broadcast(this);
 }
