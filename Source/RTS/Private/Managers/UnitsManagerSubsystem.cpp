@@ -1,52 +1,47 @@
 ﻿#include "Managers/UnitsManagerSubsystem.h"
-
-#include "AI/RTS_BasePawn.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "Managers/TasksManagerSubsystem.h"
+#include "AI/RTS_BaseUnit.h"
+#include "Tasks/Task.h"
 
-void UUnitsManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+void UUnitsManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
-	Super::Initialize(Collection);
-	verify((TasksManager = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()) != nullptr);
+	Super::OnWorldBeginPlay(InWorld);
 
-	TasksManager->OnTaskCreated.BindDynamic(this, &ThisClass::AssignUnit);
+	GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->OnNewTaskAvailable.AddUObject(this, &ThisClass::Handle_TaskAvailable);
 }
 
-void UUnitsManagerSubsystem::RegisterUnit(ARTS_BasePawn* InNewUnit)
+void UUnitsManagerSubsystem::RegisterUnit(ARTS_BaseUnit* InNewUnit)
 {
-	// Add new unit to the units list
-	_registeredUnits.Add(InNewUnit);
-}
-
-void UUnitsManagerSubsystem::AssignUnit(const UTask* InTask)
-{
-	// Filter units by their status
-	TArray<TObjectPtr<ARTS_BasePawn>> availableUnits = _registeredUnits.FilterByPredicate([](const ARTS_BasePawn* unit)
-	{
-		// Add here some additional checks, like if unit is alive, units profession, task priority etc.
-		return unit->GetUnitStatus() == Idle;
-	});
-
-	// Check if there is any available units for that task
-	if (availableUnits.Num() == 0)
-	{
-		// Add This task to backlog list in tasks manager
-
-		// Notify if no units available
-#if WITH_EDITOR
-		GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("Units not Assigned")));
-#endif
+	if (!InNewUnit)
 		return;
-	}
-	
-	// Sort available units by fitness (distance, skill, task priority etc.)
-	
-	// Select required amount of units by formula min(require, available)
-	for (const ARTS_BasePawn* unit : availableUnits)
-		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), unit->GetActorLocation(), 50.f, 12, FLinearColor::Green, 10.f, 1.f);
 
-	// Change assigned units status
-	
-	// Assign this task for selected units
-	
+	_registeredUnits.Add(InNewUnit);
+	InNewUnit->OnUnitBecomeAvailable.AddUObject(this, &ThisClass::Handle_UnitAvailable);
+}
+
+
+void UUnitsManagerSubsystem::Handle_TaskAvailable(UTask* Task)
+{
+	// Find the best unit for that task
+
+	ReAssign();
+}
+
+void UUnitsManagerSubsystem::Handle_UnitAvailable(const ARTS_BaseUnit* ARTS_BaseUnit)
+{
+	// Find the best task for that unit
+
+	ReAssign();
+}
+
+void UUnitsManagerSubsystem::ReAssign()
+{
+	for (ARTS_BaseUnit* unit : _registeredUnits)
+	{
+		if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RequestTaskForUnit(unit))
+		{
+			unit->AssignTask(task);
+			task->ReserveWorkerSlot();
+		}
+	}
 }

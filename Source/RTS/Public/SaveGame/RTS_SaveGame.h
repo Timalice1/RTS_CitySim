@@ -37,7 +37,7 @@ struct FComponentSaveDataRecord
 };
 
 USTRUCT()
-struct FObjectSaveDataRecord
+struct FTaskSaveDataRecord
 {
 	GENERATED_BODY()
 
@@ -59,5 +59,5 @@ public:
 	TArray<FComponentSaveDataRecord> ComponentsData;
 
 	UPROPERTY()
-	TArray<FObjectSaveDataRecord> ObjectsData;
+	TArray<FTaskSaveDataRecord> TaskData;
 };

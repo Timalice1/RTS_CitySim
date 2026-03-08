@@ -1,5 +1,6 @@
 ﻿#include "Core/RTS_GameState.h"
 
+#include "AIController.h"
 #include "EngineUtils.h"
 #include "SaveGame/RTS_SaveGame.h"
 #include "SaveGame/SaveableInterface.h"
@@ -30,7 +31,7 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 {
 	if (!SaveGameObject)
 		return;
-	
+
 	// Clean up currently saved actors
 	// TODO: Remove only dirty actors instead
 	SaveGameObject->WorldActorsRecords.Empty();
@@ -48,7 +49,7 @@ void ARTS_GameState::OnSaveGameRequested(URTS_SaveGame* SaveGameObject)
 		saveRecord.ActorClass = actor->GetClass();
 		saveRecord.ActorName = actor->GetName();
 		saveRecord.ActorTransform = actor->GetActorTransform();
-		
+
 		// Run internal actor serialization logic
 		// Serialize fields, marked as UPROPERTY(SaveGame)
 		saveRecord.ByteData = GetGameInstance()->GetSubsystem<USaveGameSubsystem>()->SerializeObject(actor);
@@ -64,11 +65,12 @@ void ARTS_GameState::OnSaveGameLoaded(URTS_SaveGame* SaveGameObject)
 	if (!SaveGameObject)
 		return;
 
-	// Remove all saveable actors that already on the scene
 	for (FActorIterator It(WorldContext); It; ++It)
 	{
 		AActor* actor = *It;
-		if (actor && actor->Implements<USaveableInterface>())
+		if (actor &&
+			(actor->Implements<USaveableInterface>() // Destroy saveable actors (will be respawned)
+				|| Cast<AAIController>(actor))) // Destroy AI Controllers (since they will be respawned through PlacedInWorldOrSpawned)
 			actor->Destroy();
 	}
 

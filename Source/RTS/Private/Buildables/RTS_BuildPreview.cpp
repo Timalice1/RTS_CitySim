@@ -94,13 +94,16 @@ void ARTS_BuildPreview::ApplyOverlay()
 void ARTS_BuildPreview::StartBuild()
 {
 	// Create and configure new task
-	if (UTask* task = NewObject<UTask>())
+	if (UTask* task = NewObject<UTask>(this))
 	{
-		task->TaskName = FName("Building");
-		task->TaskLocation = GetActorLocation();
-		task->MaxWork = _buildingData.MaxDurability;
-		_buildingTask = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(task);
-		
+		task->TaskID = FGuid::NewGuid();
+		_buildingTask = task->TaskID;
+		task->TaskEntity = FTaskEntity(FName("Building"),
+		                               GetActorLocation(),
+		                               _buildingData.MaxDurability,
+		                               5);
+		GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(task);
+
 		task->OnTaskCompletedEvent.AddUObject(this, &ThisClass::Handle_TaskCompleted);
 		task->OnProgressChanged.BindUObject(this, &ThisClass::UpdateBuildingProgress);
 		task->RunTask();
@@ -121,13 +124,13 @@ void ARTS_BuildPreview::UpdateBuildingProgress(const float InProgress)
 	if (!BuildingMesh)
 		return;
 
-	if (InProgress >= 1)
+	/*if (InProgress >= 1)
 	{
 		if (UStaticMesh* completeMesh = _buildingData.BuildingMesh_Complete.LoadSynchronous())
 			BuildingMesh->SetStaticMesh(completeMesh);
 		EndBuild();
 		return;
-	}
+	}*/
 
 	const int32 progressMeshIndex = FMath::Floor(InProgress * _buildingData.BuildingMesh_Stages.Num());
 	if (_buildingData.BuildingMesh_Stages.IsValidIndex(progressMeshIndex))
@@ -168,12 +171,7 @@ void ARTS_BuildPreview::Deselect()
 	InteractionPanelWidget->SetVisibility(false);
 }
 
-void ARTS_BuildPreview::EndBuild()
+void ARTS_BuildPreview::Handle_TaskCompleted(class UTask* Task)
 {
 	OnBuildCompleted.Broadcast(this);
-}
-
-void ARTS_BuildPreview::Handle_TaskCompleted(const class UTask* Task)
-{
-	EndBuild();
 }

@@ -4,9 +4,9 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "TasksManagerSubsystem.generated.h"
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOnTaskCreatedEvent, const class UTask*, Task);
-
 class UTask;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnNewTaskAvailableEvent, UTask*);
 
 UCLASS()
 class RTS_API UTasksManagerSubsystem : public UWorldSubsystem
@@ -16,11 +16,20 @@ class RTS_API UTasksManagerSubsystem : public UWorldSubsystem
 public:
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
-	virtual FGuid RegisterTask(UTask* InTask);
+	/* Register newly created task in the manager */
+	UFUNCTION(BlueprintCallable, Category = Tasks)
+	virtual void RegisterTask(UTask* InTask);
 
-	UTask* GetTaskByID(const FGuid& InGuid) const;
+	/* Return a task object reference by task ID */
+	virtual UTask* GetTaskByID(const FGuid& InGuid) const;
 
-	FOnTaskCreatedEvent OnTaskCreated;
+	/// Returns most scored task for provided unit
+	/// 
+	/// Evaluates tasks score from a backlog, based on Task priority, 
+	/// unit priorities, preferences and skills
+	virtual UTask* RequestTaskForUnit(const class ARTS_BaseUnit* Unit);
+
+	FOnNewTaskAvailableEvent OnNewTaskAvailable;
 
 private:
 	UPROPERTY()

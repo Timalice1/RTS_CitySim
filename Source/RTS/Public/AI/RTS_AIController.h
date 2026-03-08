@@ -4,7 +4,7 @@
 #include "AIController.h"
 #include "RTS_AIController.generated.h"
 
-struct FTaskData;
+class ARTS_BaseUnit;
 
 UCLASS()
 class RTS_API ARTS_AIController : public AAIController
@@ -14,4 +14,5 @@ class RTS_API ARTS_AIController : public AAIController
 public:
 	ARTS_AIController();
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
 };

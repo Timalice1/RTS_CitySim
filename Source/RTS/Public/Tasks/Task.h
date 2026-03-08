@@ -4,59 +4,101 @@
 #include "UObject/Object.h"
 #include "Task.generated.h"
 
-UENUM()
-enum ETaskStatus
+/// Task entity structure
+/// 
+/// Holds data, info and requirements for a specific task
+/// TODO: Make this entity data-table editable (optional)
+USTRUCT(BlueprintType, Blueprintable)
+struct FTaskEntity
 {
-	Active,
-	Pending
+	GENERATED_BODY()
+
+	/* Task name */
+	UPROPERTY(BlueprintReadWrite, SaveGame, Category = Task, meta = (ExposeOnSpawn))
+	FName TaskName;
+
+	/* Task target position in the world (if any outer actor) */
+	UPROPERTY(BlueprintReadWrite, SaveGame, Category = Task)
+	FVector TaskLocation;
+
+	/* Max work points */
+	UPROPERTY(BlueprintReadWrite, SaveGame, Category = Task)
+	float MaxWork;
+
+	/*Max required worker slots for this task*/
+	UPROPERTY(BlueprintReadWrite, SaveGame, Category = Task)
+	int RequiredWorkers;
+
+	// TODO: Add a task type Gameplay tag or enum
+
+	FTaskEntity() {}
+
+	FTaskEntity(const FName InTaskName,
+	            const FVector& InTaskLocation = FVector::ZeroVector,
+	            const float InWorkAmount = 100.f,
+	            const int InWorkSlots = 1)
+		: TaskName(InTaskName),
+		  TaskLocation(InTaskLocation),
+		  MaxWork(InWorkAmount),
+		  RequiredWorkers(InWorkSlots) {};
 };
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnTaskCompletedEvent, const class UTask*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnTaskCompletedEvent, class UTask*);
 DECLARE_DELEGATE_OneParam(FOnProgressChangedEvent, const float);
 
-UCLASS()
+UCLASS(BlueprintType, Blueprintable)
 class RTS_API UTask : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	/**/
-	UPROPERTY(SaveGame)
+	/* Unique task ID for accessing after serialization and deserialization */
+	UPROPERTY(BlueprintReadOnly, SaveGame, meta = (ExposeOnSpawn))
 	FGuid TaskID;
 
-	/* Task name (probably will be changed with ID)*/
-	UPROPERTY(BlueprintReadOnly, SaveGame, Category = Task)
-	FName TaskName = FName("task_name");
+	UPROPERTY(BlueprintReadOnly, SaveGame, Category = Task, meta = (ExposeOnSpawn))
+	FTaskEntity TaskEntity;
 
-	/* Task target position in the world*/
-	UPROPERTY(BlueprintReadOnly, SaveGame, Category = Task)
-	FVector TaskLocation = FVector::ZeroVector;
-
-	/*Max work points*/
-	UPROPERTY(BlueprintReadOnly, SaveGame, Category = Task)
-	float MaxWork = 100.f;
-
+public:
 	/// Fires when the task is completed
 	FOnTaskCompletedEvent OnTaskCompletedEvent;
 
-	/// Fires when task progress is changed in any way
+	/// Fires when task progress is updated
 	FOnProgressChangedEvent OnProgressChanged;
 
+public:
+	UFUNCTION(BlueprintCallable, Category = Task)
 	virtual void RunTask();
 
-	virtual void SetTaskStatus(const TEnumAsByte<ETaskStatus> NewStatus) { _taskStatus = NewStatus; }
-	virtual TEnumAsByte<ETaskStatus> GetTaskStatus() const { return _taskStatus; }
+	/* Set a new priority value for that task*/
+	UFUNCTION(BlueprintCallable, Category = "Task|Priority")
+	virtual void SetTaskPriority(const int InPriority);
+
+	UFUNCTION(BlueprintCallable, Category = "Task|Priority")
+	virtual int GetTaskPriority() const { return _taskPriority; }
+
+	/* Reserves a slot for a unit on that task*/
+	virtual void ReserveWorkerSlot()
+	{
+		if (_reservedSlots < TaskEntity.RequiredWorkers)
+			_reservedSlots++;
+	}
+
+	virtual int GetReservedSlots() const { return _reservedSlots; }
 
 private:
 	UPROPERTY(SaveGame)
-	float WorkCurrent = 0.f;
+	float _workCurrent = 0.f;
 
 	UPROPERTY(SaveGame)
-	float TaskProgress = 0.f;
+	float _taskProgress = 0.f;
 
-	TEnumAsByte<ETaskStatus> _taskStatus;
+	UPROPERTY(SaveGame)
+	int _taskPriority = 5;
+
+	UPROPERTY(SaveGame)
+	int _reservedSlots = 0;
 
 private:
 	virtual UWorld* GetWorld() const override;
-	virtual void UpdateTaskProgress();
 };

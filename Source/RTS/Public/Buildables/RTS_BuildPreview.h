@@ -52,11 +52,9 @@ public:
 	//~ End selectable interface
 
 private: // Internal
-	// Finish building process
-	virtual void EndBuild();
-	
+
 	UFUNCTION()
-	virtual void Handle_TaskCompleted(const class UTask *Task);
+	virtual void Handle_TaskCompleted(class UTask* Task);
 
 	// Updates build process - update mesh and progress
 	virtual void UpdateBuildingProgress(const float InProgress);
