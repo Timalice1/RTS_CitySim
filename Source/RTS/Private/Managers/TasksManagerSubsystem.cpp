@@ -24,10 +24,6 @@ void UTasksManagerSubsystem::RegisterTask(UTask* InTask)
 	Tasks.Add(InTask);
 
 	OnNewTaskAvailable.Broadcast(InTask);
-
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Green, FString::Printf(TEXT("%s task was registered"), *InTask->TaskEntity.TaskName.ToString()));
-#endif
 }
 
 UTask* UTasksManagerSubsystem::GetTaskByID(const FGuid& InGuid) const
@@ -41,33 +37,29 @@ UTask* UTasksManagerSubsystem::GetTaskByID(const FGuid& InGuid) const
 UTask* UTasksManagerSubsystem::RequestTaskForUnit(const class ARTS_BaseUnit* Unit)
 {
 	// Check unit state first
-	if (!Unit || Unit->HadActiveTask())
+	if (!Unit || Unit->HadActiveTask() || Tasks.IsEmpty())
 		return nullptr;
-
-
-	// Filter tasks by lack of workers
-	const TArray<UTask*> availableTasks = Tasks.FilterByPredicate([](const UTask* task)
-	{
-		return task->GetReservedSlots() < task->TaskEntity.RequiredWorkers;
-	});
-
+	
 	// Evaluate filtered tasks score
 	UTask* bestTask = nullptr;
-	if (!availableTasks.IsEmpty())
+	float bestScore = 0;
+	for (UTask* task : Tasks)
 	{
-		int bestScore = 0;
-		for (UTask* task : availableTasks)
+		// Skip if task is already fully reserved
+		if (task->GetReservedSlots() == task->TaskEntity.RequiredWorkers) continue;
+
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(),
+		                                      task->TaskEntity.TaskLocation,
+		                                      25.f, 12, FLinearColor::Yellow, 5.f, 2.f);
+
+		const float dist = FVector::Dist(Unit->GetActorLocation(), task->TaskEntity.TaskLocation);
+		const float score = task->GetTaskPriority() / dist; // TODO: Probably add some weights for each scorer
+		if (score > bestScore)
 		{
-			const float dist = FVector::DistSquared(Unit->GetActorLocation(), task->TaskEntity.TaskLocation);
-			const float score = task->GetTaskPriority() * dist; // TODO: Probably add some weights for each scorer
-			if (score > bestScore)
-			{
-				bestScore = score;
-				bestTask = task;
-			}
+			bestScore = score;
+			bestTask = task;
 		}
 	}
-
 	return bestTask;
 }
 
