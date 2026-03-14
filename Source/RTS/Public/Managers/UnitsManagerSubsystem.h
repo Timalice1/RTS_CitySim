@@ -22,8 +22,9 @@ private:
 	UPROPERTY()
 	TArray<TObjectPtr<ARTS_BaseUnit>> _registeredUnits;
 
+	//===============TODO: Refactor this shit ===========================
 	virtual void Handle_TaskAvailable(class UTask* Task);
 	virtual void Handle_UnitAvailable(const ARTS_BaseUnit* ARTS_BaseUnit);
-
 	virtual void ReAssign();
+	//===================================================================
 };

@@ -16,7 +16,7 @@ ARTS_BaseUnit::ARTS_BaseUnit()
 	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	bUseControllerRotationYaw = true;
-	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned; //-->!! IMPORTANT FOR SAVE/LOAD !!<--
 
 	// Setup mesh component
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
@@ -30,7 +30,6 @@ ARTS_BaseUnit::ARTS_BaseUnit()
 void ARTS_BaseUnit::BeginPlay()
 {
 	Super::BeginPlay();
-	UE_VLOG(GetWorld(), LogTemp, Warning, TEXT("Unit spawned"));
 
 	// Register this unit in the Units manager
 	GetWorld()->GetSubsystem<UUnitsManagerSubsystem>()->RegisterUnit(this);
@@ -43,8 +42,9 @@ void ARTS_BaseUnit::AssignTask(UTask* InTask)
 
 	_currentTask = InTask;
 	_currentTaskID = InTask->TaskID;
-	UpdateBlackboardTask();
 	InTask->OnTaskCompletedEvent.AddUObject(this, &ThisClass::Handle_TaskCompleted);
+
+	UpdateBlackboardTask();
 }
 
 class UBehaviorTree* ARTS_BaseUnit::GetBTAsset() const
@@ -58,9 +58,8 @@ void ARTS_BaseUnit::Handle_TaskCompleted(UTask* Task)
 {
 	_currentTask = nullptr;
 	_currentTaskID.Invalidate();
-	UpdateBlackboardTask();
+	UpdateBlackboardTask(); // nullify task reference in blackboard
 
-	// TODO: Broadcast OnUnitAvailableEvent
 	OnUnitBecomeAvailable.Broadcast(this);
 }
 
@@ -75,7 +74,7 @@ void ARTS_BaseUnit::UpdateBlackboardTask()
 
 void ARTS_BaseUnit::LoadObjectData(FArchive& Ar)
 {
-	//Load assigned task for that unit
+	//Load and restore assigned task for that unit
 	if (_currentTaskID.IsValid())
 	{
 		if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->GetTaskByID(_currentTaskID))

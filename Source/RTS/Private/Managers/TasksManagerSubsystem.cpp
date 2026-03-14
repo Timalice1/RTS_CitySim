@@ -52,26 +52,23 @@ UTask* UTasksManagerSubsystem::RequestTaskForUnit(const class ARTS_BaseUnit* Uni
 	});
 
 	// Evaluate filtered tasks score
+	UTask* bestTask = nullptr;
 	if (!availableTasks.IsEmpty())
 	{
-		int maxPriority = 0;
-		UTask* targetTask = nullptr;
+		int bestScore = 0;
 		for (UTask* task : availableTasks)
 		{
-			UKismetSystemLibrary::DrawDebugSphere(GetWorld(),
-			                                      task->TaskEntity.TaskLocation,
-			                                      25.f, 12, FLinearColor::Green, 1.f, 1.f);
-
-			if (task->GetTaskPriority() > maxPriority)
+			const float dist = FVector::DistSquared(Unit->GetActorLocation(), task->TaskEntity.TaskLocation);
+			const float score = task->GetTaskPriority() * dist; // TODO: Probably add some weights for each scorer
+			if (score > bestScore)
 			{
-				maxPriority = task->GetTaskPriority();
-				targetTask = task;
+				bestScore = score;
+				bestTask = task;
 			}
 		}
-		return targetTask;
 	}
 
-	return nullptr;
+	return bestTask;
 }
 
 void UTasksManagerSubsystem::Handle_SaveRequested(class URTS_SaveGame* SaveGameObject)
@@ -86,7 +83,7 @@ void UTasksManagerSubsystem::Handle_SaveRequested(class URTS_SaveGame* SaveGameO
 
 void UTasksManagerSubsystem::Handle_SaveLoaded(class URTS_SaveGame* SaveGameObject)
 {
-	// Clear current tasks array
+	// Clear current tasks
 	Tasks.Empty();
 
 	// Deserialize saved tasks data and register new tasks

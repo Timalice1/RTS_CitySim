@@ -20,6 +20,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
 	TObjectPtr<class UFloatingPawnMovement> PawnMovement = nullptr;
 
+	UPROPERTY(EditDefaultsOnly, Category = AI)
+	TSoftObjectPtr<class UBehaviorTree> BehaviorTreeAsset;
+
 public:
 	ARTS_BaseUnit();
 	virtual void BeginPlay() override;
@@ -29,17 +32,22 @@ public:
 	virtual void LoadObjectData(FArchive& Ar) override;
 	//~ End Saveable interface
 
+	/* Assign a new task for that unit */
+	virtual void AssignTask(class UTask* InTask);
 	virtual bool HadActiveTask() const { return _currentTask != nullptr; }
 
-	virtual void AssignTask(class UTask* InTask);
-
-	FOnUnitBecomeAvailableEvent OnUnitBecomeAvailable;
-	
+	/// Loads and returns a unit-specific behavior tree reference
 	virtual class UBehaviorTree* GetBTAsset() const;
 
-protected:
-	UPROPERTY(EditDefaultsOnly, Category = AI)
-	TSoftObjectPtr<class UBehaviorTree> BehaviorTreeAsset;
+public:
+	/// Currently called when unit finish his current task
+	FOnUnitBecomeAvailableEvent OnUnitBecomeAvailable;
+
+private:
+	void Handle_TaskCompleted(UTask* Task);
+
+	// Updates current task object reference in blackboard
+	virtual void UpdateBlackboardTask();
 
 private:
 	UPROPERTY(SaveGame)
@@ -47,8 +55,4 @@ private:
 
 	UPROPERTY()
 	class UTask* _currentTask = nullptr;
-
-	void Handle_TaskCompleted(UTask* Task);
-
-	virtual void UpdateBlackboardTask();
 };

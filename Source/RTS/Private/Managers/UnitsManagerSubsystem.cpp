@@ -6,12 +6,11 @@
 void UUnitsManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
-
 	GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->OnNewTaskAvailable.AddUObject(this, &ThisClass::Handle_TaskAvailable);
-}
+} 
 
 void UUnitsManagerSubsystem::RegisterUnit(ARTS_BaseUnit* InNewUnit)
-{
+{               
 	if (!InNewUnit)
 		return;
 
