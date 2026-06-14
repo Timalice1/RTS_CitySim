@@ -6,6 +6,8 @@
 
 class UTask;
 
+DECLARE_LOG_CATEGORY_EXTERN(LogTasksManager, Log, All);
+
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnNewTaskAvailableEvent, UTask*);
 
 UCLASS()
@@ -17,11 +19,14 @@ public:
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
 	/* Register newly created task in the manager */
-	UFUNCTION(BlueprintCallable, Category = Tasks)
+	UFUNCTION(BlueprintCallable, Category = TasksManager)
 	virtual void RegisterTask(UTask* InTask);
 
 	/* Return a task object reference by task ID */
 	virtual UTask* GetTaskByID(const FGuid& InGuid) const;
+	
+	UFUNCTION(BlueprintCallable, Category = TasksManager)
+	virtual TArray<UTask*> FindTasksByCategory(const FGameplayTag &InCategory) const;
 
 	/// Returns most scored task for provided unit
 	/// 
@@ -45,5 +50,5 @@ private:
 	virtual void Handle_SaveLoaded(class URTS_SaveGame* SaveGameObject);
 
 	UFUNCTION()
-	virtual void Handle_TaskCompleted(class UTask* Task);
+	virtual void Handle_TaskFinished(class UTask* Task, bool bSuccess, const FString& message);
 };

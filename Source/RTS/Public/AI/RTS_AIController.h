@@ -13,6 +13,9 @@ class RTS_API ARTS_AIController : public AAIController
 
 public:
 	ARTS_AIController();
-	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
+	
+private:
+	UPROPERTY()
+	TObjectPtr<class ARTS_BaseUnit> _controlledUnit = nullptr;
 };

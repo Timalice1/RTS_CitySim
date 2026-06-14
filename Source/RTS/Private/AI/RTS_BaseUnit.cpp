@@ -1,9 +1,9 @@
 ﻿#include "AI/RTS_BaseUnit.h"
-
 #include "AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Managers/TasksManagerSubsystem.h"
 #include "Managers/UnitsManagerSubsystem.h"
 #include "Tasks/Task.h"
@@ -12,8 +12,8 @@ static FName NAME_CurrentTask = FName("CurrentTask");
 
 ARTS_BaseUnit::ARTS_BaseUnit()
 {
-	PrimaryActorTick.bCanEverTick = false;
-	PrimaryActorTick.bStartWithTickEnabled = false;
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	bUseControllerRotationYaw = true;
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned; //-->!! IMPORTANT FOR SAVE/LOAD !!<--
@@ -27,49 +27,75 @@ ARTS_BaseUnit::ARTS_BaseUnit()
 	PawnMovement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("PawnMovementComponent"));
 }
 
-void ARTS_BaseUnit::BeginPlay()
+void ARTS_BaseUnit::PossessedBy(AController* NewController)
 {
-	Super::BeginPlay();
+	Super::PossessedBy(NewController);
+	verify((_controller = Cast<AAIController>(NewController)) != nullptr);
 
 	// Register this unit in the Units manager
 	GetWorld()->GetSubsystem<UUnitsManagerSubsystem>()->RegisterUnit(this);
+}
+
+void ARTS_BaseUnit::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	int i = 10;
+	for (const auto& item : _inventory)
+	{
+		UKismetSystemLibrary::DrawDebugString(
+			GetWorld(),
+			GetActorLocation() + FVector::UpVector * (300 + i),
+			FString::Printf(TEXT("%s: %d"), *item.Key->GetName(), item.Value),
+			0, FLinearColor::Blue, 0
+		);
+		i += 50;
+	}
 }
 
 void ARTS_BaseUnit::AssignTask(UTask* InTask)
 {
 	if (!InTask)
 		return;
-
 	_currentTask = InTask;
 	_currentTaskID = InTask->TaskID;
-	InTask->OnTaskCompletedEvent.AddUObject(this, &ThisClass::Handle_TaskCompleted);
+	InTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_TaskFinished);
 
 	UpdateBlackboardTask();
 }
 
-class UBehaviorTree* ARTS_BaseUnit::GetBTAsset() const
+void ARTS_BaseUnit::Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message)
+{
+	if (bSuccess)
+	{
+		_currentTask = nullptr;
+		_currentTaskID.Invalidate();
+		UpdateBlackboardTask(); // invalidate blackboard value
+	}
+	OnUnitBecomeAvailable.Broadcast(this);
+}
+
+class UBehaviorTree* ARTS_BaseUnit::GetDefaultBTAsset() const
 {
 	if (BehaviorTreeAsset)
 		return BehaviorTreeAsset.LoadSynchronous();
 	return nullptr;
 }
 
-void ARTS_BaseUnit::Handle_TaskCompleted(UTask* Task)
-{
-	_currentTask = nullptr;
-	_currentTaskID.Invalidate();
-	UpdateBlackboardTask(); // nullify task reference in blackboard
-
-	OnUnitBecomeAvailable.Broadcast(this);
-}
-
 void ARTS_BaseUnit::UpdateBlackboardTask()
 {
-	if (AAIController* ai_controller = Cast<AAIController>(GetInstigatorController()))
+	if (UBlackboardComponent* blackboard = _controller->GetBlackboardComponent())
+		blackboard->SetValueAsObject(NAME_CurrentTask, _currentTask);
+}
+
+bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<class AActor>& InItem)
+{
+	if (_currentItemsCount < MaxInventoryCapacity)
 	{
-		if (UBlackboardComponent* blackboard = ai_controller->GetBlackboardComponent())
-			blackboard->SetValueAsObject(NAME_CurrentTask, _currentTask);
+		_inventory.FindOrAdd(InItem)++;
+		_currentItemsCount++;
+		return true;
 	}
+	return false;
 }
 
 void ARTS_BaseUnit::LoadObjectData(FArchive& Ar)

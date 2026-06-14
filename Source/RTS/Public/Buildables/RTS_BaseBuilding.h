@@ -12,7 +12,9 @@
  * Here is actual build logic and behavior
  */
 UCLASS()
-class ARTS_BaseBuilding : public AActor, public ISaveableInterface, public ISelectableInterface
+class ARTS_BaseBuilding : public AActor,
+                          public ISaveableInterface,
+                          public ISelectableInterface
 {
 	GENERATED_BODY()
 
@@ -25,12 +27,12 @@ public:
 	virtual void Init(const struct FBuildingData& BuildData);
 	UFUNCTION(BlueprintCallable, Category = BaseBuilding)
 	virtual void HandleDestroy();
-	
+
 	//~ Begin saveable interface
 	virtual void SaveObjectData(FArchive& Ar) override {}
 	virtual void LoadObjectData(FArchive& Ar) override;
 	//~ End saveable interface
-	
+
 	//~ Begin selectable interface
 	virtual void Select() override;
 	virtual void Deselect() override;
@@ -39,13 +41,13 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
 	TObjectPtr<class UStaticMeshComponent> BuildingMesh = nullptr;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
 	TObjectPtr<class UWidgetComponent> BuildingInteractionWidget = nullptr;
-	
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Widgets)
 	TSoftClassPtr<class UBuilding_InteractionPanel> InteractionPanelWidgetClass;
-		
+
 	UPROPERTY(SaveGame)
 	FBuildingData _buildData;
 };

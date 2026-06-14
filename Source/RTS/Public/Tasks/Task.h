@@ -1,104 +1,87 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
+#include "Engine/World.h"
+#include "SaveGame/SaveableInterface.h"
 #include "UObject/Object.h"
 #include "Task.generated.h"
 
-/// Task entity structure
-/// 
-/// Holds data, info and requirements for a specific task
-/// TODO: Make this entity data-table editable (optional)
-USTRUCT(BlueprintType, Blueprintable)
-struct FTaskEntity
-{
-	GENERATED_BODY()
-
-	/* Task name */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = Task, meta = (ExposeOnSpawn))
-	FName TaskName;
-
-	/* Task target position in the world (if any outer actor) */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = Task)
-	FVector TaskLocation;
-
-	/* Max work points */
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = Task)
-	float MaxWork;
-
-	/*Max required worker slots for this task*/
-	UPROPERTY(BlueprintReadWrite, SaveGame, Category = Task)
-	int RequiredWorkers;
-
-	// TODO: Add a task type Gameplay tag or enum
-
-	FTaskEntity() {}
-
-	FTaskEntity(const FName InTaskName,
-	            const FVector& InTaskLocation = FVector::ZeroVector,
-	            const float InWorkAmount = 100.f,
-	            const int InWorkSlots = 1)
-		: TaskName(InTaskName),
-		  TaskLocation(InTaskLocation),
-		  MaxWork(InWorkAmount),
-		  RequiredWorkers(InWorkSlots) {};
-};
-
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnTaskCompletedEvent, class UTask*);
-DECLARE_DELEGATE_OneParam(FOnProgressChangedEvent, const float);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnTaskFinishedEvent, class UTask*, Task, bool, bSuccess, const FString&, message);
 
 UCLASS(BlueprintType, Blueprintable)
-class RTS_API UTask : public UObject
+class RTS_API UTask : public UObject, public ISaveableInterface
 {
 	GENERATED_BODY()
 
 public:
-	/* Unique task ID for accessing after serialization and deserialization */
+	/* Unique task ID, used for access after serialization and deserialization */
 	UPROPERTY(BlueprintReadOnly, SaveGame, meta = (ExposeOnSpawn))
 	FGuid TaskID;
 
-	UPROPERTY(BlueprintReadOnly, SaveGame, Category = Task, meta = (ExposeOnSpawn))
-	FTaskEntity TaskEntity;
+	/* 
+	 * Displayable name of that task
+	 * Will be shown in a unit infobox
+	 */
+	UPROPERTY(BlueprintReadOnly, SaveGame, meta = (ExposeOnSpawn), Category = Task)
+	FName ActionName;
+
+	UPROPERTY(BlueprintReadOnly, SaveGame, meta = (ExposeOnSpawn), Category = Task)
+	FGameplayTag TaskCategory;
+
+	/* Target location of that task*/
+	UPROPERTY(BlueprintReadOnly, SaveGame, meta = (ExposeOnSpawn), Category = Task)
+	FVector TaskLocation;
+
+	UPROPERTY(BlueprintReadOnly, SaveGame, meta = (ExposeOnSpawn), Category = Task)
+	uint8 MaxJobSlots = 1;
 
 public:
-	/// Fires when the task is completed
-	FOnTaskCompletedEvent OnTaskCompletedEvent;
-
-	/// Fires when task progress is updated
-	FOnProgressChangedEvent OnProgressChanged;
+	/// Fires when the task has been completed / canceled / failed / interrupted
+	UPROPERTY(BlueprintAssignable, BlueprintCallable, Category = Events)
+	FOnTaskFinishedEvent OnTaskFinished;
 
 public:
-	UFUNCTION(BlueprintCallable, Category = Task)
-	virtual void RunTask();
-
-	/* Set a new priority value for that task*/
-	UFUNCTION(BlueprintCallable, Category = "Task|Priority")
-	virtual void SetTaskPriority(const int InPriority);
+	/* Main enter point into task performing */
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = Task)
+	void Execute(class AAIController* Executor);
+	virtual void Execute_Implementation(class AAIController* Executor) {};
 
 	UFUNCTION(BlueprintCallable, Category = "Task|Priority")
 	virtual int GetTaskPriority() const { return _taskPriority; }
 
-	/* Reserves a slot for a unit on that task*/
-	virtual void ReserveWorkerSlot()
-	{
-		if (_reservedSlots < TaskEntity.RequiredWorkers)
-			_reservedSlots++;
-	}
+	UFUNCTION(BlueprintCallable, Category = Task)
+	virtual bool IsLocked() const { return _bLocked; }
 
-	virtual int GetReservedSlots() const { return _reservedSlots; }
+	UFUNCTION()
+	virtual void ReserveJobSlot()
+	{
+		if (_bLocked)
+			return;
+		_reservedSlots++;
+		if (_reservedSlots == MaxJobSlots)
+			_bLocked = true;
+	};
 
 private:
-	UPROPERTY(SaveGame)
-	float _workCurrent = 0.f;
-
-	UPROPERTY(SaveGame)
-	float _taskProgress = 0.f;
-
 	UPROPERTY(SaveGame)
 	int _taskPriority = 5;
 
 	UPROPERTY(SaveGame)
-	int _reservedSlots = 0;
+	uint8 _reservedSlots = 0;
 
-private:
-	virtual UWorld* GetWorld() const override;
+	UPROPERTY(SaveGame)
+	bool _bLocked = false;
+
+protected:
+	virtual UWorld* GetWorld() const override
+	{
+		if (GIsEditor)
+			return GWorld;
+		return GetOuter()->GetWorld();
+	}
+
+public:
+	virtual void SaveObjectData(FArchive& Ar) override {};
+	virtual void LoadObjectData(FArchive& Ar) override {};
 };

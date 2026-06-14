@@ -1,18 +1,19 @@
-#include "Buildables/RTS_BuildPreview.h"
+#include "Buildables/ConstructionProject.h"
 #include "Buildables/BuildingData.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
-#include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Managers/TasksManagerSubsystem.h"
 #include "Materials/MaterialInstance.h"
-#include "Tasks/Task.h"
+#include "Tasks/ProgressiveTask.h"
+#include "Tasks/Task_Collect.h"
+#include "Tasks/Task_Haul.h"
 #include "UI/Buildables/Building_InteractionPanel.h"
 #include "UI/Generic/G_TextBlock.h"
 #include "UI/Generic/InteractionPanelWidget.h"
 
-ARTS_BuildPreview::ARTS_BuildPreview()
+AConstructionProject::AConstructionProject()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
@@ -28,13 +29,13 @@ ARTS_BuildPreview::ARTS_BuildPreview()
 	InteractionPanelWidget->SetDrawAtDesiredSize(true);
 }
 
-void ARTS_BuildPreview::BeginPlay()
+void AConstructionProject::BeginPlay()
 {
 	Super::BeginPlay();
 	InteractionPanelWidget->SetVisibility(false);
 }
 
-void ARTS_BuildPreview::Init(const FBuildingData& BuildingData)
+void AConstructionProject::Init(const FBuildingData& BuildingData)
 {
 	_buildingData = BuildingData;
 	InitBuilding();
@@ -43,7 +44,7 @@ void ARTS_BuildPreview::Init(const FBuildingData& BuildingData)
 	ApplyOverlay();
 }
 
-void ARTS_BuildPreview::InitBuilding()
+void AConstructionProject::InitBuilding()
 {
 	if (!BuildingMesh)
 		return;
@@ -80,7 +81,7 @@ void ARTS_BuildPreview::InitBuilding()
 	}
 }
 
-void ARTS_BuildPreview::ApplyOverlay()
+void AConstructionProject::ApplyOverlay()
 {
 	// Create and apply dynamic overlay material instance
 	if (UMaterialInstance* overlay = OverlayPreviewMaterial.LoadSynchronous())
@@ -91,35 +92,47 @@ void ARTS_BuildPreview::ApplyOverlay()
 	}
 }
 
-void ARTS_BuildPreview::StartBuild()
+void AConstructionProject::Handle_ResourceDelivered(class UTask* Task, bool bSuccess, const FString& Message)
 {
-	// Create and configure new task
-	if (UTask* task = NewObject<UTask>(this))
+#if WITH_EDITOR
+	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("Resource collected")));
+#endif
+}
+
+void AConstructionProject::StartBuild()
+{
+	// TODO: Maybe replace with some construction fence or flags later
+	BuildingMesh->SetStaticMesh(_buildingData.BuildingMesh_Stages[0].LoadSynchronous());
+	
+	// Create delivery task for each required Resource
+	for (const auto &targetResource : _buildingData.RequiredResources)
 	{
-		task->TaskID = FGuid::NewGuid();
-		_buildingTask = task->TaskID;
-		task->TaskEntity = FTaskEntity(FName("Building"),
-		                               GetActorLocation(),
-		                               _buildingData.MaxDurability,
-		                               5);
-		GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(task);
-
-		task->OnTaskCompletedEvent.AddUObject(this, &ThisClass::Handle_TaskCompleted);
-		task->OnProgressChanged.BindUObject(this, &ThisClass::UpdateBuildingProgress);
-		task->RunTask();
+		if (UTask_Collect* collectTask = NewObject<UTask_Collect>())
+		{
+			collectTask->TaskID = FGuid::NewGuid();
+			collectTask->ActionName = FName("Collecting");
+			collectTask->TaskCategory = FGameplayTag::RequestGameplayTag("Tasks.Category.Haul");
+			collectTask->TaskLocation = GetActorLocation();
+			collectTask->TargetItemType = targetResource.Key;
+			collectTask->TargetAmount = targetResource.Value;
+			
+			collectTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_ResourceDelivered);
+			
+			GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(collectTask);
+		}
 	}
-
+	
 	// Disable overlay material
 	BuildingMesh->SetOverlayMaterial(nullptr);
 }
 
-void ARTS_BuildPreview::HandleCancelBuild()
+void AConstructionProject::HandleCancelBuild()
 {
 	GetWorld()->GetTimerManager().ClearAllTimersForObject(this);
 	Destroy();
 }
 
-void ARTS_BuildPreview::UpdateBuildingProgress(const float InProgress)
+void AConstructionProject::UpdateBuildingProgress(const float& InProgress)
 {
 	if (!BuildingMesh)
 		return;
@@ -142,36 +155,35 @@ void ARTS_BuildPreview::UpdateBuildingProgress(const float InProgress)
 	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), InProgress), NULL, FLinearColor::Yellow, .01f);
 }
 
-void ARTS_BuildPreview::SetIsPlaceable(bool bIsPlaceable)
+void AConstructionProject::SetIsPlaceable(bool bIsPlaceable)
 {
 	if (_overlayMaterial)
 		_overlayMaterial->SetScalarParameterValue(TEXT("Status"), bIsPlaceable ? 1.f : 0.f);
 }
 
-void ARTS_BuildPreview::SaveObjectData(FArchive& Ar) {}
+void AConstructionProject::SaveObjectData(FArchive& Ar) {}
 
-void ARTS_BuildPreview::LoadObjectData(FArchive& Ar)
+void AConstructionProject::LoadObjectData(FArchive& Ar)
 {
 	InitBuilding();
-	if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->GetTaskByID(_buildingTask))
+	if (UProgressiveTask* task = Cast<UProgressiveTask>(GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->GetTaskByID(_buildingTask)))
 	{
-		task->OnTaskCompletedEvent.AddUObject(this, &ThisClass::Handle_TaskCompleted);
+		task->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_TaskFinished);
 		task->OnProgressChanged.BindUObject(this, &ThisClass::UpdateBuildingProgress);
-		task->RunTask();
 	}
 }
 
-void ARTS_BuildPreview::Select()
+void AConstructionProject::Select()
 {
 	InteractionPanelWidget->SetVisibility(true);
 }
 
-void ARTS_BuildPreview::Deselect()
+void AConstructionProject::Deselect()
 {
 	InteractionPanelWidget->SetVisibility(false);
 }
 
-void ARTS_BuildPreview::Handle_TaskCompleted(class UTask* Task)
+void AConstructionProject::Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message)
 {
 	OnBuildCompleted.Broadcast(this);
 }

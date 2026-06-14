@@ -1,15 +1,18 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "NativeGameplayTags.h"
+#include "Core/Interfaces/InventoryInterface.h"
 #include "GameFramework/Pawn.h"
 #include "SaveGame/SaveableInterface.h"
 #include "RTS_BaseUnit.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnUnitBecomeAvailableEvent, const class ARTS_BaseUnit*)
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnUnitBecomeAvailableEvent, const class ARTS_BaseUnit*);
 
 UCLASS()
 class RTS_API ARTS_BaseUnit : public APawn,
-                              public ISaveableInterface
+                              public ISaveableInterface,
+                              public IInventoryInterface
 {
 	GENERATED_BODY()
 
@@ -25,7 +28,9 @@ protected:
 
 public:
 	ARTS_BaseUnit();
-	virtual void BeginPlay() override;
+	virtual void PossessedBy(AController* NewController) override;
+
+	virtual void Tick(float DeltaSeconds) override;
 
 	//~ Begin Saveable interface
 	virtual void SaveObjectData(FArchive& Ar) override {}
@@ -36,23 +41,42 @@ public:
 	virtual void AssignTask(class UTask* InTask);
 	virtual bool HadActiveTask() const { return _currentTask != nullptr; }
 
-	/// Loads and returns a unit-specific behavior tree reference
-	virtual class UBehaviorTree* GetBTAsset() const;
+	/* Load and returns default Behavior tree asset for that unit*/
+	virtual class UBehaviorTree* GetDefaultBTAsset() const;
 
 public:
 	/// Currently called when unit finish his current task
 	FOnUnitBecomeAvailableEvent OnUnitBecomeAvailable;
 
 private:
-	void Handle_TaskCompleted(UTask* Task);
+	UFUNCTION()
+	void Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message);
 
 	// Updates current task object reference in blackboard
 	virtual void UpdateBlackboardTask();
 
 private:
+	UPROPERTY()
+	TObjectPtr<class AAIController> _controller;
+
 	UPROPERTY(SaveGame)
 	FGuid _currentTaskID;
 
 	UPROPERTY()
 	class UTask* _currentTask = nullptr;
+
+	//============== Inventory =====================
+private:
+	UPROPERTY(SaveGame)
+	TMap<TSubclassOf<AActor>, uint8> _inventory;
+	UPROPERTY(SaveGame)
+	uint8 _currentItemsCount = 0;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Inventory)
+	uint8 MaxInventoryCapacity = UINT8_MAX;
+
+public:
+	UFUNCTION()
+	virtual bool TryAddItem(const TSubclassOf<class AActor>& InItem) override;
 };

@@ -3,7 +3,7 @@
 #include "Buildables/Road.h"
 #include "Buildables/RTS_BaseBuilding.h"
 #include "Core/RTS_PlayerController.h"
-#include "Buildables/RTS_BuildPreview.h"
+#include "Buildables/ConstructionProject.h"
 #include "Core/Libraries/RTS_HUD_Library.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -68,7 +68,7 @@ void UBuilderComponent::EnterBuildMode(const FBuildingData& BuildingData)
 	}
 
 	// Try get and spawn new preview building actor
-	if ((BuildPreviewActor = WorldContext->SpawnActor<ARTS_BuildPreview>(BuildPreview_Class.LoadSynchronous(), player->TraceMouseToLandscape(), FRotator::ZeroRotator)))
+	if ((BuildPreviewActor = WorldContext->SpawnActor<AConstructionProject>(BuildPreview_Class.LoadSynchronous(), player->TraceMouseToLandscape(), FRotator::ZeroRotator)))
 	{
 		FBuildingData buildData = BuildingData;
 		buildData.CellSize = CellSize;
@@ -95,7 +95,7 @@ void UBuilderComponent::BuildDeploy()
 {
 	if (BuildPreviewActor && ValidatePlacement(BuildPreviewActor->GetActorLocation(), BuildPreviewActor->GetBuildingBounds(), BuildPreviewActor))
 	{
-		if (ARTS_BuildPreview* build = WorldContext->SpawnActor<ARTS_BuildPreview>(
+		if (AConstructionProject* build = WorldContext->SpawnActor<AConstructionProject>(
 			BuildPreview_Class.LoadSynchronous(),
 			BuildPreviewActor->GetActorLocation() - FVector::UpVector * PreviewBuildFloatHeight,
 			BuildPreviewActor->GetActorRotation()))
@@ -150,7 +150,7 @@ FVector UBuilderComponent::SnapToGrid(const FVector& WorldLocation) const
 	return retVal;
 }
 
-void UBuilderComponent::HandleBuildCompleted(ARTS_BuildPreview* PreviewActor)
+void UBuilderComponent::HandleBuildCompleted(AConstructionProject* PreviewActor)
 {
 	check(PreviewActor);
 
@@ -311,10 +311,10 @@ void UBuilderComponent::LoadObjectData(FArchive& Ar)
 {
 	// Rebinding preview buildings completed delegates
 	TArray<AActor*> outActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ARTS_BuildPreview::StaticClass(), outActors);
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AConstructionProject::StaticClass(), outActors);
 	for (AActor* actor : outActors)
 	{
-		if (ARTS_BuildPreview* build = Cast<ARTS_BuildPreview>(actor))
+		if (AConstructionProject* build = Cast<AConstructionProject>(actor))
 		{
 			build->OnBuildCompleted.RemoveAll(this);
 			build->OnBuildCompleted.AddDynamic(this, &ThisClass::HandleBuildCompleted);

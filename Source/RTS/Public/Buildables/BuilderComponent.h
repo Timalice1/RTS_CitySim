@@ -50,7 +50,7 @@ public:
 
 	/// Build completed callback handle
 	UFUNCTION()
-	virtual void HandleBuildCompleted(class ARTS_BuildPreview* PreviewActor);
+	virtual void HandleBuildCompleted(class AConstructionProject* PreviewActor);
 
 	//======================Roads building=====================
 
@@ -109,7 +109,7 @@ protected:
 
 	/// Preview building class reference
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = BuildingPreview)
-	TSoftClassPtr<class ARTS_BuildPreview> BuildPreview_Class;
+	TSoftClassPtr<class AConstructionProject> BuildPreview_Class;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Road)
 	TSoftClassPtr<class ARoad> Road_Class;
@@ -147,7 +147,7 @@ private:
 	UPROPERTY()
 	class UWorld* WorldContext = nullptr;
 	UPROPERTY()
-	class ARTS_BuildPreview* BuildPreviewActor = nullptr;
+	class AConstructionProject* BuildPreviewActor = nullptr;
 	FRotator TargetRotation = FRotator::ZeroRotator;
 
 	/** Calculate and validate target transform for each road point */

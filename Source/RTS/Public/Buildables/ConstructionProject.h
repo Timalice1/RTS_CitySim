@@ -5,26 +5,25 @@
 #include "Buildables/BuildingData.h"
 #include "Core/Interfaces/SelectableInterface.h"
 #include "SaveGame/SaveableInterface.h"
-#include "RTS_BuildPreview.generated.h"
+#include "ConstructionProject.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBuildFinishedEvent, class ARTS_BuildPreview*, PreviewActor);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBuildFinishedEvent, class AConstructionProject*, PreviewActor);
 
 UCLASS(Abstract)
-class RTS_API ARTS_BuildPreview : public AActor,
-                                  public ISaveableInterface,
-                                  public ISelectableInterface
+class RTS_API AConstructionProject : public AActor,
+                                     public ISaveableInterface,
+                                     public ISelectableInterface
 {
 	GENERATED_BODY()
 
 public:
-	ARTS_BuildPreview();
+	AConstructionProject();
 
 	virtual void BeginPlay() override;
 
 	/// Init build data, building mesh and collider
 	UFUNCTION(BlueprintCallable, Category = Buildable)
 	virtual void Init(const struct FBuildingData& BuildingData);
-
 	/// Deploy and start build process
 	UFUNCTION(BlueprintCallable, Category = Buildable)
 	virtual void StartBuild();
@@ -54,10 +53,10 @@ public:
 private: // Internal
 
 	UFUNCTION()
-	virtual void Handle_TaskCompleted(class UTask* Task);
+	virtual void Handle_TaskFinished(class UTask* Task, bool bSuccess, const FString& message);
 
 	// Updates build process - update mesh and progress
-	virtual void UpdateBuildingProgress(const float InProgress);
+	virtual void UpdateBuildingProgress(const float& InProgress);
 
 	virtual void InitBuilding();
 
@@ -92,4 +91,10 @@ private: // Internal data
 	FGuid _buildingTask;
 
 	FVector buildingBounds;
+
+	UPROPERTY()
+	TMap<TSubclassOf<AActor>, uint8> _deliveredResources;
+
+	UFUNCTION()
+	void Handle_ResourceDelivered(class UTask* Task, bool bSuccess, const FString& Message);
 };
