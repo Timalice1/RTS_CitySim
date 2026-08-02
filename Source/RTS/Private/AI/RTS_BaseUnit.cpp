@@ -1,5 +1,6 @@
 ﻿#include "AI/RTS_BaseUnit.h"
 #include "AIController.h"
+#include "NavigationSystem.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
@@ -46,7 +47,7 @@ void ARTS_BaseUnit::Tick(float DeltaSeconds)
 			GetWorld(),
 			GetActorLocation() + FVector::UpVector * (300 + i),
 			FString::Printf(TEXT("%s: %d"), *item.Key->GetName(), item.Value),
-			0, FLinearColor::Blue, 0
+			nullptr, FLinearColor::Blue, 0
 		);
 		i += 50;
 	}
@@ -61,6 +62,14 @@ void ARTS_BaseUnit::AssignTask(UTask* InTask)
 	InTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_TaskFinished);
 
 	UpdateBlackboardTask();
+}
+
+bool ARTS_BaseUnit::IsPointReachable(const FVector& InTarget) const
+{
+	const UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(this->GetWorld());
+	if (!NavSys) return false;
+	const FPathFindingQuery query = FPathFindingQuery(this, NavSys->GetMainNavDataChecked(), this->GetActorLocation(), InTarget);
+	return NavSys->TestPathSync(query);
 }
 
 void ARTS_BaseUnit::Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message)
@@ -96,6 +105,25 @@ bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<class AActor>& InItem)
 		return true;
 	}
 	return false;
+}
+
+uint8 ARTS_BaseUnit::GetItem(const TSubclassOf<class AActor>& InItem) const
+{
+	if (const uint8* _items = _inventory.Find(InItem))
+		return *_items;
+	return 0;
+}
+
+void ARTS_BaseUnit::RemoveItem(const TSubclassOf<class AActor>& InItem, const uint8& Amount)
+{
+	if (const uint8* _items = _inventory.Find(InItem))
+	{
+		if (*_items == Amount)
+			_inventory.Remove(InItem);
+		else
+			_inventory[InItem] = *_items - Amount;
+		_currentItemsCount -= Amount;
+	}
 }
 
 void ARTS_BaseUnit::LoadObjectData(FArchive& Ar)

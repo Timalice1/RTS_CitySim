@@ -1,13 +1,12 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "NativeGameplayTags.h"
 #include "Core/Interfaces/InventoryInterface.h"
 #include "GameFramework/Pawn.h"
 #include "SaveGame/SaveableInterface.h"
 #include "RTS_BaseUnit.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnUnitBecomeAvailableEvent, const class ARTS_BaseUnit*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnUnitBecomeAvailableEvent, class ARTS_BaseUnit*);
 
 UCLASS()
 class RTS_API ARTS_BaseUnit : public APawn,
@@ -43,6 +42,8 @@ public:
 
 	/* Load and returns default Behavior tree asset for that unit*/
 	virtual class UBehaviorTree* GetDefaultBTAsset() const;
+	
+	virtual bool IsPointReachable(const FVector& InTarget) const;
 
 public:
 	/// Currently called when unit finish his current task
@@ -58,7 +59,7 @@ private:
 private:
 	UPROPERTY()
 	TObjectPtr<class AAIController> _controller;
-
+	
 	UPROPERTY(SaveGame)
 	FGuid _currentTaskID;
 
@@ -79,4 +80,10 @@ protected:
 public:
 	UFUNCTION()
 	virtual bool TryAddItem(const TSubclassOf<class AActor>& InItem) override;
+	UFUNCTION()
+	virtual uint8 GetAvailableCapacity() const override { return MaxInventoryCapacity - _currentItemsCount; }
+	UFUNCTION()
+	virtual uint8 GetItem(const TSubclassOf<class AActor>& InItem) const override;
+	UFUNCTION()
+	virtual void RemoveItem(const TSubclassOf<class AActor>& InItem, const uint8& Amount) override;
 };

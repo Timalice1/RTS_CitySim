@@ -1,14 +1,15 @@
 #include "Buildables/ConstructionProject.h"
+#include "AIController.h"
 #include "Buildables/BuildingData.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Core/Interfaces/InventoryInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Managers/TasksManagerSubsystem.h"
 #include "Materials/MaterialInstance.h"
 #include "Tasks/ProgressiveTask.h"
 #include "Tasks/Task_Collect.h"
-#include "Tasks/Task_Haul.h"
 #include "UI/Buildables/Building_InteractionPanel.h"
 #include "UI/Generic/G_TextBlock.h"
 #include "UI/Generic/InteractionPanelWidget.h"
@@ -92,38 +93,64 @@ void AConstructionProject::ApplyOverlay()
 	}
 }
 
-void AConstructionProject::Handle_ResourceDelivered(class UTask* Task, bool bSuccess, const FString& Message)
-{
-#if WITH_EDITOR
-	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Red, FString::Printf(TEXT("Resource collected")));
-#endif
-}
-
 void AConstructionProject::StartBuild()
 {
 	// TODO: Maybe replace with some construction fence or flags later
 	BuildingMesh->SetStaticMesh(_buildingData.BuildingMesh_Stages[0].LoadSynchronous());
-	
-	// Create delivery task for each required Resource
-	for (const auto &targetResource : _buildingData.RequiredResources)
-	{
-		if (UTask_Collect* collectTask = NewObject<UTask_Collect>())
-		{
-			collectTask->TaskID = FGuid::NewGuid();
-			collectTask->ActionName = FName("Collecting");
-			collectTask->TaskCategory = FGameplayTag::RequestGameplayTag("Tasks.Category.Haul");
-			collectTask->TaskLocation = GetActorLocation();
-			collectTask->TargetItemType = targetResource.Key;
-			collectTask->TargetAmount = targetResource.Value;
-			
-			collectTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_ResourceDelivered);
-			
-			GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(collectTask);
-		}
-	}
-	
+
 	// Disable overlay material
 	BuildingMesh->SetOverlayMaterial(nullptr);
+
+	// Began satisfying requirements
+	EvaluateState();
+}
+
+void AConstructionProject::EvaluateState() const
+{
+	for (const auto& required : _buildingData.RequiredResources)
+	{
+		uint8 remaining = required.Value;
+		if (const uint8* delivered = _deliveredResources.Find(required.Key))
+			remaining -= *delivered;
+
+		// TODO: FMath::CeilToInt(remaining / inventory capacity) -> tasks amount to create
+		// TODO: limit tasks amount to available units count (optional)
+		
+		if (remaining > 0)
+		{
+			if (UTask_Collect* collectTask = NewObject<UTask_Collect>())
+			{
+				collectTask->TaskID = FGuid::NewGuid();
+				collectTask->ActionName = FName("Collecting");
+				collectTask->TaskCategory = FGameplayTag::RequestGameplayTag("Tasks.Category.Haul");
+				collectTask->TaskLocation = GetActorLocation();
+				collectTask->TargetItemType = required.Key;
+				collectTask->TargetAmount = remaining;
+				
+				collectTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_ResourceDelivered);
+				GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(collectTask);
+			}
+		}
+	}
+}
+
+void AConstructionProject::Handle_ResourceDelivered(UTask* Task, bool bSuccess, const FString& Message)
+{
+	if (!bSuccess)
+		return;
+	
+	if (IInventoryInterface* inventory = Cast<IInventoryInterface>(Task->GetExecutor()->GetPawn()))
+	{
+		for (const auto& target : _buildingData.RequiredResources)
+		{
+			// TODO: Remove only required amount
+			TSubclassOf<AActor> targetItem = target.Key;
+			uint8 itemAmount = inventory->GetItem(targetItem);
+			_deliveredResources.FindOrAdd(targetItem) += itemAmount;
+			inventory->RemoveItem(targetItem, itemAmount);
+		}
+	}
+	EvaluateState();
 }
 
 void AConstructionProject::HandleCancelBuild()

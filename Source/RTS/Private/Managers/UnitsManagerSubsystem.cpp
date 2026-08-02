@@ -6,7 +6,7 @@
 void UUnitsManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
-	GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->OnNewTaskAvailable.AddUObject(this, &ThisClass::Handle_TaskAvailable);
+	GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->OnNewTaskAvailable.AddUObject(this, &ThisClass::OnTaskAvailable);
 }
 
 void UUnitsManagerSubsystem::RegisterUnit(ARTS_BaseUnit* InNewUnit)
@@ -15,32 +15,33 @@ void UUnitsManagerSubsystem::RegisterUnit(ARTS_BaseUnit* InNewUnit)
 		return;
 
 	_registeredUnits.Add(InNewUnit);
-	InNewUnit->OnUnitBecomeAvailable.AddUObject(this, &ThisClass::Handle_UnitAvailable);
+	InNewUnit->OnUnitBecomeAvailable.AddUObject(this, &ThisClass::OnUnitAvailable);
 }
 
-
-void UUnitsManagerSubsystem::Handle_TaskAvailable(UTask* Task)
+int UUnitsManagerSubsystem::GetAvailableUnitsNum() const
 {
-	// Find the best unit for that task
-
-	Assign();
+	return _registeredUnits.FilterByPredicate([](const ARTS_BaseUnit* Unit)
+	{
+		return !Unit->HadActiveTask();
+	}).Num();
 }
 
-void UUnitsManagerSubsystem::Handle_UnitAvailable(const ARTS_BaseUnit* ARTS_BaseUnit)
-{
-	// Find the best task for that unit
 
-	Assign();
-}
-
-void UUnitsManagerSubsystem::Assign()
+void UUnitsManagerSubsystem::OnTaskAvailable(UTask* Task)
 {
 	for (ARTS_BaseUnit* unit : _registeredUnits)
 	{
-		if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RequestTaskForUnit(unit))
-		{
-			unit->AssignTask(task);
-			task->ReserveJobSlot();
-		}
+		if (unit->HadActiveTask())
+			continue;
+		OnUnitAvailable(unit);
+	}
+}
+
+void UUnitsManagerSubsystem::OnUnitAvailable(ARTS_BaseUnit* InUnit)
+{
+	if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RequestTaskForUnit(InUnit))
+	{
+		InUnit->AssignTask(task);
+		task->ReserveJobSlot();
 	}
 }

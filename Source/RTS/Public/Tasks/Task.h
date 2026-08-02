@@ -45,24 +45,23 @@ public:
 	/* Main enter point into task performing */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = Task)
 	void Execute(class AAIController* Executor);
-	virtual void Execute_Implementation(class AAIController* Executor) {};
+	virtual void Execute_Implementation(class AAIController* Executor);
 
-	UFUNCTION(BlueprintCallable, Category = "Task|Priority")
+	UFUNCTION(BlueprintCallable, Category = Task)
+	virtual bool TryAssign(const class ARTS_BaseUnit* InUnit);
+
+	UFUNCTION(BlueprintCallable, Category = Task)
 	virtual int GetTaskPriority() const { return _taskPriority; }
 
 	UFUNCTION(BlueprintCallable, Category = Task)
 	virtual bool IsLocked() const { return _bLocked; }
 
+	UFUNCTION(BlueprintCallable, Category = Task)
+	virtual class AAIController* GetExecutor() const { return _executor; }
+	
 	UFUNCTION()
-	virtual void ReserveJobSlot()
-	{
-		if (_bLocked)
-			return;
-		_reservedSlots++;
-		if (_reservedSlots == MaxJobSlots)
-			_bLocked = true;
-	};
-
+	virtual void ReserveJobSlot();
+	
 private:
 	UPROPERTY(SaveGame)
 	int _taskPriority = 5;
@@ -73,13 +72,11 @@ private:
 	UPROPERTY(SaveGame)
 	bool _bLocked = false;
 
+	UPROPERTY(SaveGame)
+	TObjectPtr<class AAIController> _executor;
+
 protected:
-	virtual UWorld* GetWorld() const override
-	{
-		if (GIsEditor)
-			return GWorld;
-		return GetOuter()->GetWorld();
-	}
+	virtual UWorld* GetWorld() const override;
 
 public:
 	virtual void SaveObjectData(FArchive& Ar) override {};

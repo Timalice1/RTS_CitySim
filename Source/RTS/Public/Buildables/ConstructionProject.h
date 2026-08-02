@@ -61,6 +61,8 @@ private: // Internal
 	virtual void InitBuilding();
 
 	virtual void ApplyOverlay();
+	
+	virtual void EvaluateState() const;
 
 protected: // Components
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
@@ -96,5 +98,5 @@ private: // Internal data
 	TMap<TSubclassOf<AActor>, uint8> _deliveredResources;
 
 	UFUNCTION()
-	void Handle_ResourceDelivered(class UTask* Task, bool bSuccess, const FString& Message);
+	virtual void Handle_ResourceDelivered(class UTask* Task, bool bSuccess, const FString& Message);
 };

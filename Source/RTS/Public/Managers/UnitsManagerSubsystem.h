@@ -16,15 +16,16 @@ public:
 
 	/*Register new unit in the manager*/
 	virtual void RegisterUnit(ARTS_BaseUnit* InNewUnit);
-
+	
+	UFUNCTION(BlueprintCallable, Category = UnitsManager)
+	virtual int GetAvailableUnitsNum() const;
 
 private: 
+	
+	// TODO: Add separated registry for available units
 	UPROPERTY()
 	TArray<TObjectPtr<ARTS_BaseUnit>> _registeredUnits;
 
-	//===============TODO: Refactor this shit ===========================
-	virtual void Handle_TaskAvailable(class UTask* Task);
-	virtual void Handle_UnitAvailable(const ARTS_BaseUnit* ARTS_BaseUnit);
-	virtual void Assign();
-	//===================================================================
+	virtual void OnTaskAvailable(class UTask* Task);
+	virtual void OnUnitAvailable(ARTS_BaseUnit* InUnit);
 };
