@@ -17,8 +17,12 @@ void UTask::Execute_Implementation(AAIController* Executor)
 
 bool UTask::TryAssign(const ARTS_BaseUnit* InUnit)
 {
-	if (_bLocked || !InUnit || ! InUnit->IsPointReachable(TaskLocation))
+	if (_bLocked)
 		return false;
+	if (!InUnit || !InUnit->IsPointReachable(TaskLocation)) {
+		UE_LOG(LogTemp, Warning, TEXT("TryAssign - Unit invalid or target point was unreachable"))
+		return false;
+	}
 	return true;
 }
 

@@ -56,13 +56,16 @@ private: // Internal
 	virtual void Handle_TaskFinished(class UTask* Task, bool bSuccess, const FString& message);
 
 	// Updates build process - update mesh and progress
-	virtual void UpdateBuildingProgress(const float& InProgress);
+	virtual void UpdateBuildingProgress(const float InProgress) const;
 
 	virtual void InitBuilding();
 
 	virtual void ApplyOverlay();
-	
+
 	virtual void EvaluateState() const;
+
+	/// Compare a required resources map with delivered recources
+	virtual bool CheckResources() const;
 
 protected: // Components
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)

@@ -51,8 +51,7 @@ void AConstructionProject::InitBuilding()
 		return;
 
 	// Init mesh and mesh bounds
-	if (UStaticMesh* meshComplete = _buildingData.BuildingMesh_Complete.LoadSynchronous())
-	{
+	if (UStaticMesh* meshComplete = _buildingData.BuildingMesh_Complete.LoadSynchronous()) {
 		BuildingMesh->SetStaticMesh(meshComplete);
 
 		// Init collider size
@@ -63,18 +62,17 @@ void AConstructionProject::InitBuilding()
 		// Building size adjustment to match world grid parameters
 		// BuildingSize = MeshBounds + (CellSize - (MeshBounds % CellSize));
 		const uint32 CellSize = _buildingData.CellSize;
-		if ((static_cast<int>(Max.X) % CellSize != 0) && (static_cast<int>(Max.Y) % CellSize != 0))
-		{
+		if ((static_cast<int>(Max.X) % CellSize != 0) && (static_cast<int>(Max.Y) % CellSize != 0)) {
 			buildingBounds.X = Max.X + (CellSize - static_cast<int>(Max.X) % CellSize);
 			buildingBounds.Y = Max.Y + (CellSize - static_cast<int>(Max.Y) % CellSize);
 		}
 	}
 
 	// Initialize interaction panel widget
-	if (TSubclassOf<UInteractionPanelWidget> interactionPanelClass = InteractionPanelWidgetClass.LoadSynchronous())
-	{
-		if (UBuilding_InteractionPanel* interactionPanel = Cast<UBuilding_InteractionPanel>(CreateWidget(UGameplayStatics::GetPlayerController(GetWorld(), 0), interactionPanelClass)))
-		{
+	if (const TSubclassOf<UInteractionPanelWidget> interactionPanelClass = InteractionPanelWidgetClass.
+		LoadSynchronous()) {
+		if (UBuilding_InteractionPanel* interactionPanel = Cast<UBuilding_InteractionPanel>(
+			CreateWidget(UGameplayStatics::GetPlayerController(GetWorld(), 0), interactionPanelClass))) {
 			interactionPanel->Title->SetText(_buildingData.Title);
 			interactionPanel->OnDestroyButtonClicked.BindUObject(this, &ThisClass::HandleCancelBuild);
 			InteractionPanelWidget->SetWidget(interactionPanel);
@@ -85,8 +83,7 @@ void AConstructionProject::InitBuilding()
 void AConstructionProject::ApplyOverlay()
 {
 	// Create and apply dynamic overlay material instance
-	if (UMaterialInstance* overlay = OverlayPreviewMaterial.LoadSynchronous())
-	{
+	if (UMaterialInstance* overlay = OverlayPreviewMaterial.LoadSynchronous()) {
 		_overlayMaterial = UMaterialInstanceDynamic::Create(overlay, this);
 		if (_overlayMaterial)
 			BuildingMesh->SetOverlayMaterial(_overlayMaterial);
@@ -98,7 +95,7 @@ void AConstructionProject::StartBuild()
 	// TODO: Maybe replace with some construction fence or flags later
 	BuildingMesh->SetStaticMesh(_buildingData.BuildingMesh_Stages[0].LoadSynchronous());
 
-	// Disable overlay material
+	// Disable overlay material	
 	BuildingMesh->SetOverlayMaterial(nullptr);
 
 	// Began satisfying requirements
@@ -107,42 +104,65 @@ void AConstructionProject::StartBuild()
 
 void AConstructionProject::EvaluateState() const
 {
-	for (const auto& required : _buildingData.RequiredResources)
-	{
-		uint8 remaining = required.Value;
-		if (const uint8* delivered = _deliveredResources.Find(required.Key))
-			remaining -= *delivered;
+	if (!CheckResources()) {
+		for (const auto& required : _buildingData.RequiredResources) {
+			uint8 remaining = required.Value;
+			if (const uint8* delivered = _deliveredResources.Find(required.Key))
+				remaining -= *delivered;
 
-		// TODO: FMath::CeilToInt(remaining / inventory capacity) -> tasks amount to create
-		// TODO: limit tasks amount to available units count (optional)
-		
-		if (remaining > 0)
-		{
-			if (UTask_Collect* collectTask = NewObject<UTask_Collect>())
-			{
-				collectTask->TaskID = FGuid::NewGuid();
-				collectTask->ActionName = FName("Collecting");
-				collectTask->TaskCategory = FGameplayTag::RequestGameplayTag("Tasks.Category.Haul");
-				collectTask->TaskLocation = GetActorLocation();
-				collectTask->TargetItemType = required.Key;
-				collectTask->TargetAmount = remaining;
-				
-				collectTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_ResourceDelivered);
-				GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(collectTask);
+			// TODO: FMath::CeilToInt(remaining / inventory capacity) -> tasks amount to create
+			// TODO: limit tasks amount to available units count (optional)
+
+			if (remaining > 0) {
+				if (UTask_Collect* collectTask = NewObject<UTask_Collect>()) {
+					collectTask->TaskID = FGuid::NewGuid();
+					collectTask->ActionName = FName("Collecting");
+					collectTask->TaskCategory = FGameplayTag::RequestGameplayTag("Tasks.Category.Haul");
+					collectTask->TaskLocation = GetActorLocation();
+					collectTask->TargetItemType = required.Key;
+					collectTask->TargetAmount = remaining;
+
+					collectTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_ResourceDelivered);
+					GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(collectTask);
+				}
 			}
 		}
 	}
+	else {
+		if (UProgressiveTask* building_task = NewObject<UProgressiveTask>()) {
+			building_task->TaskID = FGuid::NewGuid();
+			building_task->ActionName = FName("Building");
+			building_task->TaskCategory = FGameplayTag::RequestGameplayTag("Tasks.Category.Build");
+			building_task->TaskLocation = GetActorLocation();
+			building_task->MaxJobSlots = 2;
+			building_task->WorkAmount = _buildingData.MaxDurability;
+
+			building_task->OnProgressChanged.BindUObject(this, &AConstructionProject::UpdateBuildingProgress);
+			building_task->OnTaskFinished.AddDynamic(this, &ThisClass::AConstructionProject::Handle_TaskFinished);
+			GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(building_task);
+		}
+	}
+}
+
+bool AConstructionProject::CheckResources() const
+{
+	if (_deliveredResources.Num() != _buildingData.RequiredResources.Num())
+		return false;
+	for (const auto& target : _buildingData.RequiredResources) {
+		const uint8* delivered = _deliveredResources.Find(target.Key);
+		if (!delivered || *delivered < target.Value)
+			return false;
+	}
+	return true;
 }
 
 void AConstructionProject::Handle_ResourceDelivered(UTask* Task, bool bSuccess, const FString& Message)
 {
 	if (!bSuccess)
 		return;
-	
-	if (IInventoryInterface* inventory = Cast<IInventoryInterface>(Task->GetExecutor()->GetPawn()))
-	{
-		for (const auto& target : _buildingData.RequiredResources)
-		{
+
+	if (IInventoryInterface* inventory = Cast<IInventoryInterface>(Task->GetExecutor()->GetPawn())) {
+		for (const auto& target : _buildingData.RequiredResources) {
 			// TODO: Remove only required amount
 			TSubclassOf<AActor> targetItem = target.Key;
 			uint8 itemAmount = inventory->GetItem(targetItem);
@@ -159,27 +179,20 @@ void AConstructionProject::HandleCancelBuild()
 	Destroy();
 }
 
-void AConstructionProject::UpdateBuildingProgress(const float& InProgress)
+void AConstructionProject::UpdateBuildingProgress(const float InProgress) const
 {
 	if (!BuildingMesh)
 		return;
 
-	/*if (InProgress >= 1)
-	{
-		if (UStaticMesh* completeMesh = _buildingData.BuildingMesh_Complete.LoadSynchronous())
-			BuildingMesh->SetStaticMesh(completeMesh);
-		EndBuild();
-		return;
-	}*/
-
 	const int32 progressMeshIndex = FMath::Floor(InProgress * _buildingData.BuildingMesh_Stages.Num());
-	if (_buildingData.BuildingMesh_Stages.IsValidIndex(progressMeshIndex))
-	{
+	if (_buildingData.BuildingMesh_Stages.IsValidIndex(progressMeshIndex)) {
 		if (UStaticMesh* progressMesh = _buildingData.BuildingMesh_Stages[progressMeshIndex].LoadSynchronous())
 			BuildingMesh->SetStaticMesh(progressMesh);
 	}
 
-	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f, FString::Printf(TEXT("Progress: {%.3f}"), InProgress), NULL, FLinearColor::Yellow, .01f);
+	UKismetSystemLibrary::DrawDebugString(GetWorld(), GetActorLocation() + FVector::UpVector * 1200.f,
+	                                      FString::Printf(TEXT("Progress: {%.3f}"), InProgress), nullptr,
+	                                      FLinearColor::Yellow, .01f);
 }
 
 void AConstructionProject::SetIsPlaceable(bool bIsPlaceable)
@@ -193,8 +206,8 @@ void AConstructionProject::SaveObjectData(FArchive& Ar) {}
 void AConstructionProject::LoadObjectData(FArchive& Ar)
 {
 	InitBuilding();
-	if (UProgressiveTask* task = Cast<UProgressiveTask>(GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->GetTaskByID(_buildingTask)))
-	{
+	if (UProgressiveTask* task = Cast<UProgressiveTask>(
+		GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->GetTaskByID(_buildingTask))) {
 		task->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_TaskFinished);
 		task->OnProgressChanged.BindUObject(this, &ThisClass::UpdateBuildingProgress);
 	}

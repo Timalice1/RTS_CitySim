@@ -39,6 +39,4 @@ private:
 	bool _bClosed = false;
 	uint8 _targetIndex = 0;
 
-	UPROPERTY()
-	TObjectPtr<class AAIController> _executor = nullptr;
 };

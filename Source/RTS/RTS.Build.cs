@@ -17,7 +17,8 @@ public class RTS : ModuleRules
 			"EnhancedInput", 
 			"AIModule", 
 			"UMG",
-			"GameplayTags"
+			"GameplayTags",
+			"NavigationSystem"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

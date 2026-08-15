@@ -6,7 +6,8 @@
 void UUnitsManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
-	GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->OnNewTaskAvailable.AddUObject(this, &ThisClass::OnTaskAvailable);
+	GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->OnNewTaskAvailable.
+	            AddUObject(this, &ThisClass::OnTaskAvailable);
 }
 
 void UUnitsManagerSubsystem::RegisterUnit(ARTS_BaseUnit* InNewUnit)
@@ -26,22 +27,18 @@ int UUnitsManagerSubsystem::GetAvailableUnitsNum() const
 	}).Num();
 }
 
-
 void UUnitsManagerSubsystem::OnTaskAvailable(UTask* Task)
 {
-	for (ARTS_BaseUnit* unit : _registeredUnits)
-	{
-		if (unit->HadActiveTask())
-			continue;
-		OnUnitAvailable(unit);
+	for (ARTS_BaseUnit* unit : _registeredUnits) {
+		if (!unit->HadActiveTask())
+			OnUnitAvailable(unit);
 	}
 }
 
 void UUnitsManagerSubsystem::OnUnitAvailable(ARTS_BaseUnit* InUnit)
 {
-	if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RequestTaskForUnit(InUnit))
-	{
-		InUnit->AssignTask(task);
+	if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RequestTaskForUnit(InUnit)) {
 		task->ReserveJobSlot();
+		InUnit->AssignTask(task);
 	}
 }

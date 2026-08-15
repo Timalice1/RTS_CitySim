@@ -33,6 +33,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, SaveGame, meta = (ExposeOnSpawn), Category = Task)
 	FVector TaskLocation;
 
+	/// Max number of workers that can be assigned
 	UPROPERTY(BlueprintReadOnly, SaveGame, meta = (ExposeOnSpawn), Category = Task)
 	uint8 MaxJobSlots = 1;
 
@@ -47,12 +48,11 @@ public:
 	void Execute(class AAIController* Executor);
 	virtual void Execute_Implementation(class AAIController* Executor);
 
+	/// Check if possible to assign that task to anyone. Overridable per-task.
 	UFUNCTION(BlueprintCallable, Category = Task)
 	virtual bool TryAssign(const class ARTS_BaseUnit* InUnit);
-
-	UFUNCTION(BlueprintCallable, Category = Task)
-	virtual int GetTaskPriority() const { return _taskPriority; }
-
+	
+	/// Check if it's possible to take that task - e.g., task are already taken by someone else
 	UFUNCTION(BlueprintCallable, Category = Task)
 	virtual bool IsLocked() const { return _bLocked; }
 
@@ -63,9 +63,6 @@ public:
 	virtual void ReserveJobSlot();
 	
 private:
-	UPROPERTY(SaveGame)
-	int _taskPriority = 5;
-
 	UPROPERTY(SaveGame)
 	uint8 _reservedSlots = 0;
 

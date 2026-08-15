@@ -9,6 +9,8 @@
 #include "Managers/UnitsManagerSubsystem.h"
 #include "Tasks/Task.h"
 
+DEFINE_LOG_CATEGORY(LogUnit);
+
 static FName NAME_CurrentTask = FName("CurrentTask");
 
 ARTS_BaseUnit::ARTS_BaseUnit()
@@ -41,8 +43,7 @@ void ARTS_BaseUnit::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	int i = 10;
-	for (const auto& item : _inventory)
-	{
+	for (const auto& item : _inventory) {
 		UKismetSystemLibrary::DrawDebugString(
 			GetWorld(),
 			GetActorLocation() + FVector::UpVector * (300 + i),
@@ -61,6 +62,8 @@ void ARTS_BaseUnit::AssignTask(UTask* InTask)
 	_currentTaskID = InTask->TaskID;
 	InTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_TaskFinished);
 
+	UE_LOG(LogUnit, Warning, TEXT("Unit: %s, assigned task: %s"), *GetName(), *InTask->ActionName.ToString());
+
 	UpdateBlackboardTask();
 }
 
@@ -68,14 +71,14 @@ bool ARTS_BaseUnit::IsPointReachable(const FVector& InTarget) const
 {
 	const UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(this->GetWorld());
 	if (!NavSys) return false;
-	const FPathFindingQuery query = FPathFindingQuery(this, NavSys->GetMainNavDataChecked(), this->GetActorLocation(), InTarget);
+	const FPathFindingQuery query = FPathFindingQuery(this, NavSys->GetMainNavDataChecked(), this->GetActorLocation(),
+	                                                  InTarget);
 	return NavSys->TestPathSync(query);
 }
 
 void ARTS_BaseUnit::Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message)
 {
-	if (bSuccess)
-	{
+	if (bSuccess) {
 		_currentTask = nullptr;
 		_currentTaskID.Invalidate();
 		UpdateBlackboardTask(); // invalidate blackboard value
@@ -98,8 +101,7 @@ void ARTS_BaseUnit::UpdateBlackboardTask()
 
 bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<class AActor>& InItem)
 {
-	if (_currentItemsCount < MaxInventoryCapacity)
-	{
+	if (_currentItemsCount < MaxInventoryCapacity) {
 		_inventory.FindOrAdd(InItem)++;
 		_currentItemsCount++;
 		return true;
@@ -116,8 +118,7 @@ uint8 ARTS_BaseUnit::GetItem(const TSubclassOf<class AActor>& InItem) const
 
 void ARTS_BaseUnit::RemoveItem(const TSubclassOf<class AActor>& InItem, const uint8& Amount)
 {
-	if (const uint8* _items = _inventory.Find(InItem))
-	{
+	if (const uint8* _items = _inventory.Find(InItem)) {
 		if (*_items == Amount)
 			_inventory.Remove(InItem);
 		else
@@ -129,8 +130,7 @@ void ARTS_BaseUnit::RemoveItem(const TSubclassOf<class AActor>& InItem, const ui
 void ARTS_BaseUnit::LoadObjectData(FArchive& Ar)
 {
 	//Load and restore assigned task for that unit
-	if (_currentTaskID.IsValid())
-	{
+	if (_currentTaskID.IsValid()) {
 		if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->GetTaskByID(_currentTaskID))
 			AssignTask(task);
 	}

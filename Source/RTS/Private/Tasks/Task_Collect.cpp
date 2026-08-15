@@ -6,6 +6,34 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "AI/RTS_BaseUnit.h"
 
+bool UTask_Collect::TryAssign(const ARTS_BaseUnit* InUnit)
+{
+	if (!Super::TryAssign(InUnit) || !TargetItemType || TargetAmount == 0)
+		return false;
+
+
+	// Check if the unit inventory isn't already full
+	if (!InUnit->GetClass()->ImplementsInterface(UInventoryInterface::StaticClass())
+		|| Cast<IInventoryInterface>(InUnit)->GetAvailableCapacity() == 0)
+		return false;
+
+	// TODO: Add ResourcesManager world subsystem, instead of iterating through all actors of type each time
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), TargetItemType, _targetItems);
+	if (_targetItems.IsEmpty() || _targetItems.Num() < TargetAmount)
+		return false;
+
+	// Check items location accessibility
+	for (AActor* item : _targetItems) {
+		if (!IsValid(item) || !InUnit->IsPointReachable(item->GetActorLocation()))
+			_targetItems.RemoveSwap(item);
+	}
+	// Do not bother if target items are not enough for that task
+	if (_targetItems.IsEmpty() || _targetItems.Num() < TargetAmount)
+		return false;
+
+	return true;
+}
+
 void UTask_Collect::Execute_Implementation(class AAIController* Executor)
 {
 	Super::Execute_Implementation(Executor);
@@ -29,37 +57,9 @@ void UTask_Collect::Execute_Implementation(class AAIController* Executor)
 	MoveToItem();
 }
 
-bool UTask_Collect::TryAssign(const ARTS_BaseUnit* InUnit)
-{
-	if (!Super::TryAssign(InUnit) || !TargetItemType || TargetAmount == 0)
-		return false;
-
-	// Check if the unit inventory isn't already full
-	if (!InUnit->GetClass()->ImplementsInterface(UInventoryInterface::StaticClass())
-		|| Cast<IInventoryInterface>(InUnit)->GetAvailableCapacity() == 0)
-		return false;
-
-	// TODO: Add ResourcesManager world subsystem, instead of iterating through all actors of type each time
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), TargetItemType, _targetItems);
-	if (_targetItems.IsEmpty() || _targetItems.Num() < TargetAmount)
-		return false;
-
-	// Check items location accessibility
-	for (AActor* item : _targetItems)
-	{
-		if (!InUnit->IsPointReachable(IsValid(item)? item->GetActorLocation() : FVector()))
-			_targetItems.RemoveSwap(item);
-	}
-	if (_targetItems.IsEmpty() || _targetItems.Num() < TargetAmount)
-		return false;
-
-	return true;
-}
-
 void UTask_Collect::MoveToItem()
 {
-	if (AActor* target = _targetItems[0])
-	{
+	if (AActor* target = _targetItems[0]) {
 		GetExecutor()->MoveToActor(target);
 		target->OnActorBeginOverlap.AddDynamic(this, &ThisClass::OnItemReached);
 	}
@@ -71,10 +71,8 @@ void UTask_Collect::OnItemReached(AActor* OverlappedActor, AActor* OtherActor)
 		return;
 	OverlappedActor->OnActorBeginOverlap.RemoveAll(this);
 
-	if (IInventoryInterface* unitInventory = Cast<IInventoryInterface>(GetExecutor()->GetPawn()))
-	{
-		if (!unitInventory->TryAddItem(OverlappedActor->GetClass()))
-		{
+	if (IInventoryInterface* unitInventory = Cast<IInventoryInterface>(GetExecutor()->GetPawn())) {
+		if (!unitInventory->TryAddItem(OverlappedActor->GetClass())) {
 			OnTaskFinished.Broadcast(this, false, FString("Failed to add item to inventory"));
 			return;
 		}
@@ -82,8 +80,7 @@ void UTask_Collect::OnItemReached(AActor* OverlappedActor, AActor* OtherActor)
 		_targetItems.Remove(OverlappedActor);
 		OverlappedActor->Destroy(); // TODO: replace with a PickUp() method on the item actor side
 
-		if (!_targetItems.IsEmpty())
-		{
+		if (!_targetItems.IsEmpty()) {
 			MoveToItem();
 			return;
 		}

@@ -26,14 +26,13 @@ bool UTask_Haul::TryRegisterItem(AActor* InItem)
 void UTask_Haul::Execute_Implementation(AAIController* Executor)
 {
 	Super::Execute_Implementation(Executor);
-	_executor = Executor;
 	_bClosed = true;
 	MoveToItem();
 }
 
 void UTask_Haul::OnTargetReached(AActor* OverlappedActor, AActor* OtherActor)
 {
-	if (IInventoryInterface* inventory = Cast<IInventoryInterface>(_executor->GetPawn()))
+	if (IInventoryInterface* inventory = Cast<IInventoryInterface>(GetExecutor()->GetPawn()))
 	{
 		if (inventory->TryAddItem(OverlappedActor->GetClass()))
 		{
@@ -59,7 +58,7 @@ void UTask_Haul::MoveToItem()
 	// Maybe split target items on a map by clusters and check the distance to the cluster center instead of the distance to pawn 
 	for (AActor* current : _registeredItems)
 	{
-		const float currentDist = FVector::Dist(_executor->GetPawn()->GetActorLocation(), current->GetActorLocation());
+		const float currentDist = FVector::Dist(GetExecutor()->GetPawn()->GetActorLocation(), current->GetActorLocation());
 		if (currentDist < bestDistance)
 		{
 			bestDistance = currentDist;
@@ -69,7 +68,7 @@ void UTask_Haul::MoveToItem()
 
 	if (target)
 	{
-		_executor->MoveToActor(target);
+		GetExecutor()->MoveToActor(target);
 		target->OnActorBeginOverlap.AddDynamic(this, &ThisClass::OnTargetReached);
 	}
 }

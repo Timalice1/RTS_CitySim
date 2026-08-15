@@ -6,6 +6,8 @@
 #include "SaveGame/SaveableInterface.h"
 #include "RTS_BaseUnit.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogUnit, Log, All);
+
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnUnitBecomeAvailableEvent, class ARTS_BaseUnit*);
 
 UCLASS()
@@ -42,10 +44,9 @@ public:
 
 	/* Load and returns default Behavior tree asset for that unit*/
 	virtual class UBehaviorTree* GetDefaultBTAsset() const;
-	
+
 	virtual bool IsPointReachable(const FVector& InTarget) const;
 
-public:
 	/// Currently called when unit finish his current task
 	FOnUnitBecomeAvailableEvent OnUnitBecomeAvailable;
 
@@ -56,10 +57,9 @@ private:
 	// Updates current task object reference in blackboard
 	virtual void UpdateBlackboardTask();
 
-private:
 	UPROPERTY()
 	TObjectPtr<class AAIController> _controller;
-	
+
 	UPROPERTY(SaveGame)
 	FGuid _currentTaskID;
 
@@ -67,7 +67,6 @@ private:
 	class UTask* _currentTask = nullptr;
 
 	//============== Inventory =====================
-private:
 	UPROPERTY(SaveGame)
 	TMap<TSubclassOf<AActor>, uint8> _inventory;
 	UPROPERTY(SaveGame)
@@ -82,6 +81,7 @@ public:
 	virtual bool TryAddItem(const TSubclassOf<class AActor>& InItem) override;
 	UFUNCTION()
 	virtual uint8 GetAvailableCapacity() const override { return MaxInventoryCapacity - _currentItemsCount; }
+
 	UFUNCTION()
 	virtual uint8 GetItem(const TSubclassOf<class AActor>& InItem) const override;
 	UFUNCTION()
