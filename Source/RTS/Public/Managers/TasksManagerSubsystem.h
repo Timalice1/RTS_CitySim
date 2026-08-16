@@ -8,8 +8,6 @@ class UTask;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTasksManager, Log, All);
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnNewTaskAvailableEvent, UTask*);
-
 UCLASS()
 class RTS_API UTasksManagerSubsystem : public UWorldSubsystem
 {
@@ -22,19 +20,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = TasksManager)
 	virtual void RegisterTask(UTask* InTask);
 
-	/* Return a task object reference by task ID */
+	/*  
+	 * Return a task object reference by task ID
+	 * Used for a save/load system
+	 */
 	virtual UTask* GetTaskByID(const FGuid& InGuid) const;
-	
-	UFUNCTION(BlueprintCallable, Category = TasksManager)
-	virtual TArray<UTask*> FindTasksByCategory(const FGameplayTag &InCategory) const;
 
 	/// Returns most scored task for provided unit
 	/// 
 	/// Evaluates tasks score from a backlog, based on Task priority, 
 	/// unit priorities, preferences and skills
 	virtual UTask* RequestTaskForUnit(const class ARTS_BaseUnit* Unit);
-
-	FOnNewTaskAvailableEvent OnNewTaskAvailable;
 
 private:
 	UPROPERTY()
@@ -51,4 +47,7 @@ private:
 
 	UFUNCTION()
 	virtual void Handle_TaskFinished(class UTask* Task, bool bSuccess, const FString& message);
+
+	UFUNCTION()
+	virtual void OnUnitAvailable(class ARTS_BaseUnit* InUnit);
 };

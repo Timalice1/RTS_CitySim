@@ -8,8 +8,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUnit, Log, All);
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnUnitBecomeAvailableEvent, class ARTS_BaseUnit*);
-
 UCLASS()
 class RTS_API ARTS_BaseUnit : public APawn,
                               public ISaveableInterface,
@@ -26,6 +24,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = AI)
 	TSoftObjectPtr<class UBehaviorTree> BehaviorTreeAsset;
+
+	UPROPERTY(BlueprintReadWrite, Category = Unit)
+	TObjectPtr<class UUnitsManagerSubsystem> _unitsManager = nullptr;
 
 public:
 	ARTS_BaseUnit();
@@ -47,15 +48,9 @@ public:
 
 	virtual bool IsPointReachable(const FVector& InTarget) const;
 
-	/// Currently called when unit finish his current task
-	FOnUnitBecomeAvailableEvent OnUnitBecomeAvailable;
-
 private:
 	UFUNCTION()
 	void Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message);
-
-	// Updates current task object reference in blackboard
-	virtual void UpdateBlackboardTask();
 
 	UPROPERTY()
 	TObjectPtr<class AAIController> _controller;

@@ -34,9 +34,16 @@ void ARTS_BaseUnit::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	verify((_controller = Cast<AAIController>(NewController)) != nullptr);
+	verify((_unitsManager = GetWorld()->GetSubsystem<UUnitsManagerSubsystem>()));
 
 	// Register this unit in the Units manager
-	GetWorld()->GetSubsystem<UUnitsManagerSubsystem>()->RegisterUnit(this);
+	_unitsManager->RegisterUnit(this);
+
+	FTimerHandle _delayTimer;
+	GetWorldTimerManager().SetTimer(_delayTimer, FTimerDelegate::CreateLambda([this]()
+	{
+		_unitsManager->NotifyUnitAvailable(this);
+	}), 2, false);
 }
 
 void ARTS_BaseUnit::Tick(float DeltaSeconds)
@@ -62,9 +69,13 @@ void ARTS_BaseUnit::AssignTask(UTask* InTask)
 	_currentTaskID = InTask->TaskID;
 	InTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_TaskFinished);
 
-	UE_LOG(LogUnit, Warning, TEXT("Unit: %s, assigned task: %s"), *GetName(), *InTask->ActionName.ToString());
+	if (UBlackboardComponent* blackboard = _controller->GetBlackboardComponent())
+		blackboard->SetValueAsObject(NAME_CurrentTask, _currentTask);
+	_unitsManager->NotifyUnitUnavailable(this);
 
-	UpdateBlackboardTask();
+	InTask->TaskStatus = CLAIMED;
+
+	UE_LOG(LogUnit, Warning, TEXT("Unit: %s, assigned task: %s"), *GetName(), *InTask->ActionName.ToString());
 }
 
 bool ARTS_BaseUnit::IsPointReachable(const FVector& InTarget) const
@@ -78,12 +89,11 @@ bool ARTS_BaseUnit::IsPointReachable(const FVector& InTarget) const
 
 void ARTS_BaseUnit::Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message)
 {
-	if (bSuccess) {
-		_currentTask = nullptr;
-		_currentTaskID.Invalidate();
-		UpdateBlackboardTask(); // invalidate blackboard value
-	}
-	OnUnitBecomeAvailable.Broadcast(this);
+	_currentTask = nullptr;
+	_currentTaskID.Invalidate();
+	if (UBlackboardComponent* blackboard = _controller->GetBlackboardComponent())
+		blackboard->ClearValue(NAME_CurrentTask);
+	_unitsManager->NotifyUnitAvailable(this);
 }
 
 class UBehaviorTree* ARTS_BaseUnit::GetDefaultBTAsset() const
@@ -93,11 +103,6 @@ class UBehaviorTree* ARTS_BaseUnit::GetDefaultBTAsset() const
 	return nullptr;
 }
 
-void ARTS_BaseUnit::UpdateBlackboardTask()
-{
-	if (UBlackboardComponent* blackboard = _controller->GetBlackboardComponent())
-		blackboard->SetValueAsObject(NAME_CurrentTask, _currentTask);
-}
 
 bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<class AActor>& InItem)
 {

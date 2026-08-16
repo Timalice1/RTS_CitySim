@@ -62,7 +62,10 @@ private: // Internal
 
 	virtual void ApplyOverlay();
 
-	virtual void EvaluateState() const;
+	virtual void EvaluateState();
+
+	virtual void CreateDeliveryTask(const TSubclassOf<AActor> InItemType, const uint8 InTargetAmount);
+	virtual void CreateBuildingTask();
 
 	/// Compare a required resources map with delivered recources
 	virtual bool CheckResources() const;
@@ -97,8 +100,12 @@ private: // Internal data
 
 	FVector buildingBounds;
 
+	/*Already delivered resources registry*/
 	UPROPERTY()
 	TMap<TSubclassOf<AActor>, uint8> _deliveredResources;
+	/*List of a resources that are already requested, but not delivered yet*/
+	UPROPERTY()
+	TMap<TSubclassOf<AActor>, uint8> _pendingResources;
 
 	UFUNCTION()
 	virtual void Handle_ResourceDelivered(class UTask* Task, bool bSuccess, const FString& Message);

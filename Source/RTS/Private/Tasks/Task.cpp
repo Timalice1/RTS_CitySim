@@ -15,12 +15,12 @@ void UTask::Execute_Implementation(AAIController* Executor)
 		_executor = Executor;
 }
 
-bool UTask::TryAssign(const ARTS_BaseUnit* InUnit)
+bool UTask::IsAvailableFor(const ARTS_BaseUnit* InUnit)
 {
-	if (_bLocked)
+	if (_bLocked || TaskStatus != AVAILABLE)
 		return false;
 	if (!InUnit || !InUnit->IsPointReachable(TaskLocation)) {
-		UE_LOG(LogTemp, Warning, TEXT("TryAssign - Unit invalid or target point was unreachable"))
+		UE_LOG(LogTemp, Warning, TEXT("IsAvailableFor - Unit invalid or target point was unreachable"))
 		return false;
 	}
 	return true;

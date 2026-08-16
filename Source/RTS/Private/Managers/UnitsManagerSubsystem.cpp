@@ -1,44 +1,32 @@
 ﻿#include "Managers/UnitsManagerSubsystem.h"
-#include "Managers/TasksManagerSubsystem.h"
 #include "AI/RTS_BaseUnit.h"
 #include "Tasks/Task.h"
 
 void UUnitsManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
-	GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->OnNewTaskAvailable.
-	            AddUObject(this, &ThisClass::OnTaskAvailable);
 }
 
 void UUnitsManagerSubsystem::RegisterUnit(ARTS_BaseUnit* InNewUnit)
 {
-	if (!InNewUnit)
-		return;
-
+	if (!InNewUnit) return;
 	_registeredUnits.Add(InNewUnit);
-	InNewUnit->OnUnitBecomeAvailable.AddUObject(this, &ThisClass::OnUnitAvailable);
 }
 
-int UUnitsManagerSubsystem::GetAvailableUnitsNum() const
+TSet<TObjectPtr<ARTS_BaseUnit>> UUnitsManagerSubsystem::GetAvailableUnits()
 {
-	return _registeredUnits.FilterByPredicate([](const ARTS_BaseUnit* Unit)
-	{
-		return !Unit->HadActiveTask();
-	}).Num();
+	return _idleUnits;
 }
 
-void UUnitsManagerSubsystem::OnTaskAvailable(UTask* Task)
+void UUnitsManagerSubsystem::NotifyUnitAvailable(ARTS_BaseUnit* InUnit)
 {
-	for (ARTS_BaseUnit* unit : _registeredUnits) {
-		if (!unit->HadActiveTask())
-			OnUnitAvailable(unit);
-	}
+	if (!InUnit) return;
+	_idleUnits.Add(InUnit);
+	OnUnitBecomeAvailable.Broadcast(InUnit);
 }
 
-void UUnitsManagerSubsystem::OnUnitAvailable(ARTS_BaseUnit* InUnit)
+void UUnitsManagerSubsystem::NotifyUnitUnavailable(ARTS_BaseUnit* InUnit)
 {
-	if (UTask* task = GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RequestTaskForUnit(InUnit)) {
-		task->ReserveJobSlot();
-		InUnit->AssignTask(task);
-	}
+	if (!InUnit || !_idleUnits.Contains(InUnit)) return;
+	_idleUnits.Remove(InUnit);
 }

@@ -6,29 +6,33 @@
 
 class ARTS_BaseUnit;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUnitBecomeAvailableEvent, ARTS_BaseUnit*, InUnit);
+
 UCLASS()
 class RTS_API UUnitsManagerSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 
-	// TODO: Keep separated lists for all units, available units, busy units, etc.
-	
 public:
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
 	/*Register new unit in the manager*/
 	virtual void RegisterUnit(ARTS_BaseUnit* InNewUnit);
-	
-	/// Returns the number of units, that didn't have any tasks assigned
+	virtual TSet<TObjectPtr<ARTS_BaseUnit>> GetAvailableUnits();
+
 	UFUNCTION(BlueprintCallable, Category = UnitsManager)
-	virtual int GetAvailableUnitsNum() const;
+	virtual void NotifyUnitAvailable(ARTS_BaseUnit* InUnit);
+	virtual void NotifyUnitUnavailable(ARTS_BaseUnit* InUnit);
 
-private: 
-	
-	// TODO: Add separated registry for available units
 	UPROPERTY()
-	TArray<TObjectPtr<ARTS_BaseUnit>> _registeredUnits;
+	FOnUnitBecomeAvailableEvent OnUnitBecomeAvailable;
 
-	virtual void OnTaskAvailable(class UTask* Task);
-	virtual void OnUnitAvailable(ARTS_BaseUnit* InUnit);
+private:
+	/*Registry of all units on the world*/
+	UPROPERTY()
+	TSet<TObjectPtr<ARTS_BaseUnit>> _registeredUnits;
+
+	/*Registry of all idle and available for work units*/
+	UPROPERTY()
+	TSet<TObjectPtr<ARTS_BaseUnit>> _idleUnits;
 };

@@ -6,11 +6,10 @@
 #include "Navigation/PathFollowingComponent.h"
 #include "AI/RTS_BaseUnit.h"
 
-bool UTask_Collect::TryAssign(const ARTS_BaseUnit* InUnit)
+bool UTask_Collect::IsAvailableFor(const ARTS_BaseUnit* InUnit)
 {
-	if (!Super::TryAssign(InUnit) || !TargetItemType || TargetAmount == 0)
+	if (!Super::IsAvailableFor(InUnit) || !TargetItemType || TargetAmount == 0)
 		return false;
-
 
 	// Check if the unit inventory isn't already full
 	if (!InUnit->GetClass()->ImplementsInterface(UInventoryInterface::StaticClass())
@@ -18,19 +17,22 @@ bool UTask_Collect::TryAssign(const ARTS_BaseUnit* InUnit)
 		return false;
 
 	// TODO: Add ResourcesManager world subsystem, instead of iterating through all actors of type each time
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), TargetItemType, _targetItems);
-	if (_targetItems.IsEmpty() || _targetItems.Num() < TargetAmount)
+	TArray<AActor*> outActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), TargetItemType, outActors);
+	if (outActors.IsEmpty() || outActors.Num() < TargetAmount)
 		return false;
 
-	// Check items location accessibility
-	for (AActor* item : _targetItems) {
-		if (!IsValid(item) || !InUnit->IsPointReachable(item->GetActorLocation()))
-			_targetItems.RemoveSwap(item);
-	}
+
+	outActors.RemoveAll([InUnit](const AActor* item)
+	{
+		return !IsValid(item) || !InUnit->IsPointReachable(item->GetActorLocation());
+	});
+
 	// Do not bother if target items are not enough for that task
-	if (_targetItems.IsEmpty() || _targetItems.Num() < TargetAmount)
+	if (outActors.IsEmpty() || outActors.Num() < TargetAmount)
 		return false;
 
+	_targetItems = outActors;
 	return true;
 }
 
@@ -51,8 +53,11 @@ void UTask_Collect::Execute_Implementation(class AAIController* Executor)
 	uint8 trim = TargetAmount;
 	if (const auto& inventory = Cast<IInventoryInterface>(Executor->GetPawn()))
 		trim = FMath::Min(inventory->GetAvailableCapacity(), TargetAmount);
+
+
 	if (_targetItems.Num() > trim)
 		_targetItems.SetNum(trim);
+
 
 	MoveToItem();
 }

@@ -41,7 +41,7 @@ void AConstructionProject::Init(const FBuildingData& BuildingData)
 	_buildingData = BuildingData;
 	InitBuilding();
 
-	// Apply preview validation overlay material to the mesh
+	// Apply preview validation overlay material to the mesh	
 	ApplyOverlay();
 }
 
@@ -102,45 +102,56 @@ void AConstructionProject::StartBuild()
 	EvaluateState();
 }
 
-void AConstructionProject::EvaluateState() const
+void AConstructionProject::EvaluateState()
 {
-	if (!CheckResources()) {
-		for (const auto& required : _buildingData.RequiredResources) {
-			uint8 remaining = required.Value;
-			if (const uint8* delivered = _deliveredResources.Find(required.Key))
-				remaining -= *delivered;
-
-			// TODO: FMath::CeilToInt(remaining / inventory capacity) -> tasks amount to create
-			// TODO: limit tasks amount to available units count (optional)
-
-			if (remaining > 0) {
-				if (UTask_Collect* collectTask = NewObject<UTask_Collect>()) {
-					collectTask->TaskID = FGuid::NewGuid();
-					collectTask->ActionName = FName("Collecting");
-					collectTask->TaskCategory = FGameplayTag::RequestGameplayTag("Tasks.Category.Haul");
-					collectTask->TaskLocation = GetActorLocation();
-					collectTask->TargetItemType = required.Key;
-					collectTask->TargetAmount = remaining;
-
-					collectTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_ResourceDelivered);
-					GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(collectTask);
-				}
-			}
-		}
+	if (CheckResources()) {
+		CreateBuildingTask();
+		return;
 	}
-	else {
-		if (UProgressiveTask* building_task = NewObject<UProgressiveTask>()) {
-			building_task->TaskID = FGuid::NewGuid();
-			building_task->ActionName = FName("Building");
-			building_task->TaskCategory = FGameplayTag::RequestGameplayTag("Tasks.Category.Build");
-			building_task->TaskLocation = GetActorLocation();
-			building_task->MaxJobSlots = 2;
-			building_task->WorkAmount = _buildingData.MaxDurability;
 
-			building_task->OnProgressChanged.BindUObject(this, &AConstructionProject::UpdateBuildingProgress);
-			building_task->OnTaskFinished.AddDynamic(this, &ThisClass::AConstructionProject::Handle_TaskFinished);
-			GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(building_task);
-		}
+	for (const auto& required : _buildingData.RequiredResources) {
+		uint8 have = 0;
+
+		if (const uint8* delivered = _deliveredResources.Find(required.Key)) have += *delivered;
+		if (const uint8* pending = _pendingResources.Find(required.Key)) have += *pending;
+
+		// TODO: FMath::CeilToInt(remaining / inventory capacity) -> tasks amount to create
+		// TODO: limit tasks amount to available units count (optional)
+
+		const uint8 target = required.Value;
+		if (have < target)
+			CreateDeliveryTask(required.Key, target - have);
+	}
+}
+
+void AConstructionProject::CreateDeliveryTask(const TSubclassOf<AActor> InItemType, const uint8 InTargetAmount)
+{
+	if (UTask_Collect* collectTask = NewObject<UTask_Collect>()) {
+		collectTask->TaskID = FGuid::NewGuid();
+		collectTask->ActionName = FName("Collecting");
+		collectTask->TaskLocation = GetActorLocation();
+		collectTask->TargetItemType = InItemType;
+		collectTask->TargetAmount = InTargetAmount;
+
+		collectTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_ResourceDelivered);
+		GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(collectTask);
+
+		_pendingResources.FindOrAdd(InItemType) += InTargetAmount;
+	}
+}
+
+void AConstructionProject::CreateBuildingTask()
+{
+	if (UProgressiveTask* building_task = NewObject<UProgressiveTask>()) {
+		building_task->TaskID = FGuid::NewGuid();
+		building_task->ActionName = FName("Building");
+		building_task->TaskLocation = GetActorLocation();
+		building_task->MaxJobSlots = 2;
+		building_task->WorkAmount = _buildingData.MaxDurability;
+
+		building_task->OnProgressChanged.BindUObject(this, &AConstructionProject::UpdateBuildingProgress);
+		building_task->OnTaskFinished.AddDynamic(this, &ThisClass::AConstructionProject::Handle_TaskFinished);
+		GetWorld()->GetSubsystem<UTasksManagerSubsystem>()->RegisterTask(building_task);
 	}
 }
 
@@ -158,20 +169,30 @@ bool AConstructionProject::CheckResources() const
 
 void AConstructionProject::Handle_ResourceDelivered(UTask* Task, bool bSuccess, const FString& Message)
 {
-	if (!bSuccess)
-		return;
+	const UTask_Collect* collectTask = Cast<UTask_Collect>(Task);
+	if (!collectTask) return;
 
-	if (IInventoryInterface* inventory = Cast<IInventoryInterface>(Task->GetExecutor()->GetPawn())) {
-		for (const auto& target : _buildingData.RequiredResources) {
-			// TODO: Remove only required amount
-			TSubclassOf<AActor> targetItem = target.Key;
-			uint8 itemAmount = inventory->GetItem(targetItem);
-			_deliveredResources.FindOrAdd(targetItem) += itemAmount;
-			inventory->RemoveItem(targetItem, itemAmount);
+	const TSubclassOf<AActor> itemType = collectTask->TargetItemType;
+
+	if (uint8* pending = _pendingResources.Find(itemType))
+		*pending = (*pending > collectTask->TargetAmount) ? *pending - collectTask->TargetAmount : 0;
+
+	if (bSuccess) {
+		if (IInventoryInterface* inventory = Cast<IInventoryInterface>(Task->GetExecutor()->GetPawn())) {
+			const uint8 required = _buildingData.RequiredResources.FindRef(itemType);
+			uint8 remaining = required;
+			if (const uint8* delivered = _deliveredResources.Find(itemType))
+				remaining -= FMath::Min(*delivered, required); // in case if delivered > required
+
+			const uint8 toTake = FMath::Min(inventory->GetItem(itemType), remaining);
+			_deliveredResources.FindOrAdd(itemType) += toTake;
+			inventory->RemoveItem(itemType, toTake);
 		}
 	}
+
 	EvaluateState();
 }
+
 
 void AConstructionProject::HandleCancelBuild()
 {
