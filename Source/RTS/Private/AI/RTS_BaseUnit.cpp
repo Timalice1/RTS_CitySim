@@ -8,6 +8,7 @@
 #include "Managers/TasksManagerSubsystem.h"
 #include "Managers/UnitsManagerSubsystem.h"
 #include "Tasks/Task.h"
+#include "Items/ItemActor.h"
 
 DEFINE_LOG_CATEGORY(LogUnit);
 
@@ -66,8 +67,6 @@ void ARTS_BaseUnit::AssignTask(UTask* InTask)
 	if (UBlackboardComponent* blackboard = _controller->GetBlackboardComponent())
 		blackboard->SetValueAsObject(NAME_CurrentTask, _currentTask);
 	ExitIdleState();
-
-	InTask->TaskStatus = CLAIMED;
 }
 
 bool ARTS_BaseUnit::IsPointReachable(const FVector& InTarget) const
@@ -115,7 +114,7 @@ class UBehaviorTree* ARTS_BaseUnit::GetDefaultBTAsset() const
 	return nullptr;
 }
 
-bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<class AActor>& InItem)
+bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<AItemActor>& InItem)
 {
 	if (_currentItemsCount < MaxInventoryCapacity) {
 		_inventory.FindOrAdd(InItem)++;
@@ -125,14 +124,14 @@ bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<class AActor>& InItem)
 	return false;
 }
 
-uint8 ARTS_BaseUnit::GetItem(const TSubclassOf<class AActor>& InItem) const
+uint8 ARTS_BaseUnit::GetItem(const TSubclassOf<AItemActor>& InItem) const
 {
 	if (const uint8* _items = _inventory.Find(InItem))
 		return *_items;
 	return 0;
 }
 
-void ARTS_BaseUnit::RemoveItem(const TSubclassOf<class AActor>& InItem, const uint8& Amount)
+void ARTS_BaseUnit::RemoveItem(const TSubclassOf<AItemActor>& InItem, const uint8& Amount)
 {
 	if (const uint8* _items = _inventory.Find(InItem)) {
 		if (*_items == Amount)

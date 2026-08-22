@@ -73,7 +73,7 @@ private:
 
 	//============== Inventory =====================
 	UPROPERTY(SaveGame)
-	TMap<TSubclassOf<AActor>, uint8> _inventory;
+	TMap<TSubclassOf<class AItemActor>, uint8> _inventory;
 	UPROPERTY(SaveGame)
 	uint8 _currentItemsCount = 0;
 
@@ -83,12 +83,12 @@ protected:
 
 public:
 	UFUNCTION()
-	virtual bool TryAddItem(const TSubclassOf<class AActor>& InItem) override;
+	virtual bool TryAddItem(const TSubclassOf<class AItemActor>& InItem) override;
 	UFUNCTION()
 	virtual uint8 GetAvailableCapacity() const override { return MaxInventoryCapacity - _currentItemsCount; }
 
 	UFUNCTION()
-	virtual uint8 GetItem(const TSubclassOf<class AActor>& InItem) const override;
+	virtual uint8 GetItem(const TSubclassOf<class AItemActor>& InItem) const override;
 	UFUNCTION()
-	virtual void RemoveItem(const TSubclassOf<class AActor>& InItem, const uint8& Amount) override;
+	virtual void RemoveItem(const TSubclassOf<class AItemActor>& InItem, const uint8& Amount) override;
 };

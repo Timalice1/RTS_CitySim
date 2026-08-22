@@ -13,7 +13,7 @@ class RTS_API UTask_Collect : public UTask
 
 public:
 	UPROPERTY()
-	TSubclassOf<class AActor> TargetItemType;
+	TSubclassOf<class AItemActor> TargetItemType;
 
 	UPROPERTY()
 	uint8 TargetAmount;
@@ -32,5 +32,5 @@ private:
 	void OnTargetReached(FAIRequestID FaiRequestID, const FPathFollowingResult& PathFollowingResult);
 
 	UPROPERTY()
-	TArray<class AActor*> _targetItems;
+	TArray<class AItemActor*> _targetItems;
 };

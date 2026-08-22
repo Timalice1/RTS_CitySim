@@ -13,6 +13,7 @@
 #include "UI/Buildables/Building_InteractionPanel.h"
 #include "UI/Generic/G_TextBlock.h"
 #include "UI/Generic/InteractionPanelWidget.h"
+#include "Items/ItemActor.h"
 
 AConstructionProject::AConstructionProject()
 {
@@ -124,7 +125,8 @@ void AConstructionProject::EvaluateState()
 	}
 }
 
-void AConstructionProject::CreateDeliveryTask(const TSubclassOf<AActor> InItemType, const uint8 InTargetAmount)
+void AConstructionProject::CreateDeliveryTask(const TSubclassOf<class AItemActor> InItemType,
+                                              const uint8 InTargetAmount)
 {
 	if (UTask_Collect* collectTask = NewObject<UTask_Collect>()) {
 		collectTask->TaskID = FGuid::NewGuid();
@@ -142,6 +144,7 @@ void AConstructionProject::CreateDeliveryTask(const TSubclassOf<AActor> InItemTy
 
 void AConstructionProject::CreateBuildingTask()
 {
+	//TODO: Replace with a UTask_Build : public UProgressiveTask
 	if (UProgressiveTask* building_task = NewObject<UProgressiveTask>()) {
 		building_task->TaskID = FGuid::NewGuid();
 		building_task->ActionName = FName("Building");
@@ -172,7 +175,7 @@ void AConstructionProject::Handle_ResourceDelivered(UTask* Task, bool bSuccess, 
 	const UTask_Collect* collectTask = Cast<UTask_Collect>(Task);
 	if (!collectTask) return;
 
-	const TSubclassOf<AActor> itemType = collectTask->TargetItemType;
+	const TSubclassOf<AItemActor> itemType = collectTask->TargetItemType;
 
 	if (uint8* pending = _pendingResources.Find(itemType))
 		*pending = (*pending > collectTask->TargetAmount) ? *pending - collectTask->TargetAmount : 0;

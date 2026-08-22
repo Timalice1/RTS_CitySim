@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "BuildingData.generated.h"
 
+
 USTRUCT(BlueprintType, Blueprintable)
 struct FBuildingData : public FTableRowBase
 {
@@ -31,17 +32,17 @@ struct FBuildingData : public FTableRowBase
 	/// Preview meshes stages, used in building progression updating
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, SaveGame, Category = Meshes)
 	TArray<TSoftObjectPtr<class UStaticMesh>> BuildingMesh_Stages;
-	
+
 	UPROPERTY(SaveGame, EditDefaultsOnly, BlueprintReadOnly, Category = BuildingConfig)
 	float BuildingProgressionSpeed = .1f;
 
 	UPROPERTY(SaveGame, EditDefaultsOnly, BlueprintReadOnly, Category = BuildingConfig)
-	TMap<TSubclassOf<AActor>, uint8> RequiredResources;
-	
+	TMap<TSubclassOf<class AItemActor>, uint8> RequiredResources;
+
 	// Cell size of the world grid. Set during building initialization
 	UPROPERTY(SaveGame)
 	uint32 CellSize = 100.f;
-	
+
 
 	//================================================================================
 	// Here can be other building data, such as building time, required resources etc.

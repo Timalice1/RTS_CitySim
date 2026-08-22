@@ -29,6 +29,8 @@ bool UTask::IsAvailableFor(const ARTS_BaseUnit* InUnit)
 void UTask::ReserveJobSlot()
 {
 	_reservedSlots++;
-	if (_reservedSlots == MaxJobSlots)
+	if (_reservedSlots == MaxJobSlots) {
+		TaskStatus = CLAIMED;
 		_bLocked = true;
+	}
 }

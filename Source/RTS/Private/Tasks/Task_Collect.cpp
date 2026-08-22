@@ -5,34 +5,44 @@
 #include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "AI/RTS_BaseUnit.h"
+#include "Items/ItemActor.h"
+
 
 bool UTask_Collect::IsAvailableFor(const ARTS_BaseUnit* InUnit)
 {
 	if (!Super::IsAvailableFor(InUnit) || !TargetItemType || TargetAmount == 0)
 		return false;
 
-	// Check if the unit inventory isn't already full
-	if (!InUnit->GetClass()->ImplementsInterface(UInventoryInterface::StaticClass())
-		|| Cast<IInventoryInterface>(InUnit)->GetAvailableCapacity() == 0)
-		return false;
+	uint8 trim = TargetAmount;
+	if (const auto& inventory = Cast<IInventoryInterface>(InUnit))
+		trim = FMath::Min(inventory->GetAvailableCapacity(), TargetAmount);
+	if (trim == 0) return false;
 
 	// TODO: Add ResourcesManager world subsystem, instead of iterating through all actors of type each time
 	TArray<AActor*> outActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), TargetItemType, outActors);
-	if (outActors.IsEmpty() || outActors.Num() < TargetAmount)
+	if (outActors.Num() < TargetAmount)
 		return false;
 
+	for (AActor* actor : outActors) {
+		AItemActor* item = Cast<AItemActor>(actor);
+		if (IsValid(item) && !item->IsReserved() && InUnit->IsPointReachable(item->GetActorLocation()))
+			_targetItems.Add(item);
+	}
 
-	outActors.RemoveAll([InUnit](const AActor* item)
+	const FVector unitLocation = InUnit->GetActorLocation();
+	_targetItems.Sort([&unitLocation](const AActor& A, const AActor& B)
 	{
-		return !IsValid(item) || !InUnit->IsPointReachable(item->GetActorLocation());
+		const float targetA = FVector::DistSquared(A.GetActorLocation(), unitLocation);
+		const float targetB = FVector::DistSquared(B.GetActorLocation(), unitLocation);
+		return targetA < targetB;
 	});
 
-	// Do not bother if target items are not enough for that task
-	if (outActors.IsEmpty() || outActors.Num() < TargetAmount)
-		return false;
+	if (_targetItems.Num() > trim)
+		_targetItems.SetNum(trim);
 
-	_targetItems = outActors;
+	if (_targetItems.IsEmpty()) return false;
+
 	return true;
 }
 
@@ -40,25 +50,8 @@ void UTask_Collect::Execute_Implementation(class AAIController* Executor)
 {
 	Super::Execute_Implementation(Executor);
 
-	// Sort target items by distance to unit
-	_targetItems.Sort([Executor](const AActor& A, const AActor& B)
-	{
-		const FVector unitLocation = Executor->GetPawn()->GetActorLocation();
-		const float targetA = FVector::DistSquared(A.GetActorLocation(), unitLocation);
-		const float targetB = FVector::DistSquared(B.GetActorLocation(), unitLocation);
-		return targetA < targetB;
-	});
-
-	// Trim sorted array by target items amount
-	uint8 trim = TargetAmount;
-	if (const auto& inventory = Cast<IInventoryInterface>(Executor->GetPawn()))
-		trim = FMath::Min(inventory->GetAvailableCapacity(), TargetAmount);
-
-
-	if (_targetItems.Num() > trim)
-		_targetItems.SetNum(trim);
-
-
+	for (AItemActor* target : _targetItems)
+		target->TryReserve();
 	MoveToItem();
 }
 
@@ -74,16 +67,20 @@ void UTask_Collect::OnItemReached(AActor* OverlappedActor, AActor* OtherActor)
 {
 	if (!GetExecutor() || OtherActor != GetExecutor()->GetPawn())
 		return;
-	OverlappedActor->OnActorBeginOverlap.RemoveAll(this);
+	AItemActor* target = Cast<AItemActor>(OverlappedActor);
+	if (!target)
+		return;
+
+	target->OnActorBeginOverlap.RemoveAll(this);
 
 	if (IInventoryInterface* unitInventory = Cast<IInventoryInterface>(GetExecutor()->GetPawn())) {
-		if (!unitInventory->TryAddItem(OverlappedActor->GetClass())) {
+		if (!unitInventory->TryAddItem(target->GetClass())) {
 			OnTaskFinished.Broadcast(this, false, FString("Failed to add item to inventory"));
 			return;
 		}
 
-		_targetItems.Remove(OverlappedActor);
-		OverlappedActor->Destroy(); // TODO: replace with a PickUp() method on the item actor side
+		_targetItems.Remove(target);
+		target->PickUp();
 
 		if (!_targetItems.IsEmpty()) {
 			MoveToItem();
