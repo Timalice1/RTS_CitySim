@@ -1,6 +1,5 @@
 ﻿#include "Managers/UnitsManagerSubsystem.h"
 #include "AI/RTS_BaseUnit.h"
-#include "Tasks/Task.h"
 
 void UUnitsManagerSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {

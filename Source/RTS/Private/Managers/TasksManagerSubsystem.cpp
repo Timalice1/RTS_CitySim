@@ -28,13 +28,6 @@ void UTasksManagerSubsystem::RegisterTask(UTask* InTask)
 	InTask->OnTaskFinished.AddDynamic(this, &ThisClass::Handle_TaskFinished);
 	Tasks.Add(InTask);
 	InTask->TaskStatus = AVAILABLE;
-	//
-	// for (ARTS_BaseUnit* unit : GetWorld()->GetSubsystem<UUnitsManagerSubsystem>()->GetAvailableUnits()) {
-	// 	if (InTask->IsAvailableFor(unit)) {
-	// 		unit->AssignTask(InTask);
-	// 		InTask->ReserveJobSlot();
-	// 	}
-	// }
 }
 
 void UTasksManagerSubsystem::OnUnitAvailable(ARTS_BaseUnit* InUnit)

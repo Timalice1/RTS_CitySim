@@ -48,6 +48,13 @@ public:
 
 	virtual bool IsPointReachable(const FVector& InTarget) const;
 
+	UPROPERTY(EditDefaultsOnly, Category = Unit)
+	float IdleNotificationInterval = 3.f;
+
+protected:
+	virtual void EnterIdleState();
+	virtual void ExitIdleState();
+
 private:
 	UFUNCTION()
 	void Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message);
@@ -60,6 +67,9 @@ private:
 
 	UPROPERTY()
 	class UTask* _currentTask = nullptr;
+
+	UPROPERTY()
+	FTimerHandle _idleNotificationTimer;
 
 	//============== Inventory =====================
 	UPROPERTY(SaveGame)

@@ -36,14 +36,8 @@ void ARTS_BaseUnit::PossessedBy(AController* NewController)
 	verify((_controller = Cast<AAIController>(NewController)) != nullptr);
 	verify((_unitsManager = GetWorld()->GetSubsystem<UUnitsManagerSubsystem>()));
 
-	// Register this unit in the Units manager
 	_unitsManager->RegisterUnit(this);
-
-	FTimerHandle _delayTimer;
-	GetWorldTimerManager().SetTimer(_delayTimer, FTimerDelegate::CreateLambda([this]()
-	{
-		_unitsManager->NotifyUnitAvailable(this);
-	}), 2, false);
+	EnterIdleState();
 }
 
 void ARTS_BaseUnit::Tick(float DeltaSeconds)
@@ -71,11 +65,9 @@ void ARTS_BaseUnit::AssignTask(UTask* InTask)
 
 	if (UBlackboardComponent* blackboard = _controller->GetBlackboardComponent())
 		blackboard->SetValueAsObject(NAME_CurrentTask, _currentTask);
-	_unitsManager->NotifyUnitUnavailable(this);
+	ExitIdleState();
 
 	InTask->TaskStatus = CLAIMED;
-
-	UE_LOG(LogUnit, Warning, TEXT("Unit: %s, assigned task: %s"), *GetName(), *InTask->ActionName.ToString());
 }
 
 bool ARTS_BaseUnit::IsPointReachable(const FVector& InTarget) const
@@ -87,13 +79,33 @@ bool ARTS_BaseUnit::IsPointReachable(const FVector& InTarget) const
 	return NavSys->TestPathSync(query);
 }
 
+void ARTS_BaseUnit::EnterIdleState()
+{
+	// HERE CAN BE ADDED A CHECKS, LIKE SCHEDULE STATE, DANGER ETC.
+	GetWorldTimerManager()
+		.SetTimer(_idleNotificationTimer,
+		          FTimerDelegate::CreateLambda([this]()
+		          {
+			          // OR HERE
+			          _unitsManager->NotifyUnitAvailable(this);
+		          }),
+		          IdleNotificationInterval + FMath::FRandRange(-.5f, .5f),
+		          true);
+}
+
+void ARTS_BaseUnit::ExitIdleState()
+{
+	GetWorldTimerManager().ClearTimer(_idleNotificationTimer);
+	_unitsManager->NotifyUnitUnavailable(this);
+}
+
 void ARTS_BaseUnit::Handle_TaskFinished(UTask* Task, bool bSuccess, const FString& message)
 {
 	_currentTask = nullptr;
 	_currentTaskID.Invalidate();
 	if (UBlackboardComponent* blackboard = _controller->GetBlackboardComponent())
 		blackboard->ClearValue(NAME_CurrentTask);
-	_unitsManager->NotifyUnitAvailable(this);
+	EnterIdleState();
 }
 
 class UBehaviorTree* ARTS_BaseUnit::GetDefaultBTAsset() const
@@ -102,7 +114,6 @@ class UBehaviorTree* ARTS_BaseUnit::GetDefaultBTAsset() const
 		return BehaviorTreeAsset.LoadSynchronous();
 	return nullptr;
 }
-
 
 bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<class AActor>& InItem)
 {
