@@ -6,6 +6,7 @@
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AXicejyl_002Easm_002Fl_003AC_0021_003FUsers_003Fadmin_003FAppData_003FLocal_003FTemp_003FSandboxFiles_003FSuwaceg_003FXicejyl_002Easm/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=B7027F95_002DC7C6_002DD46A_002DD88E_002DDC6389B2BDF3_002Ff_003ARTSEditor_002ETarget_002Ecs_002Fl_003ASource_003FRTSEditor_002ETarget_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=B7027F95_002DC7C6_002DD46A_002DD88E_002DDC6389B2BDF3_002Ff_003ARTS_002ETarget_002Ecs_002Fl_003ASource_003FRTS_002ETarget_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/CodeInspection/Highlighting/AnalysisEnabled/@EntryValue">SOLUTION</s:String>
 	<s:String x:Key="/Default/CodeStyle/CodeFormatting/CppCodeStyle/BracesInForStatement/@EntryValue">RequiredForMultiline</s:String>
 	<s:String x:Key="/Default/CodeStyle/CodeFormatting/CppCodeStyle/BracesInIfStatement/@EntryValue">RequiredForMultiline</s:String>
 	<s:String x:Key="/Default/CodeStyle/CodeFormatting/CppCodeStyle/BracesInWhileStatement/@EntryValue">RequiredForMultiline</s:String></wpf:ResourceDictionary>

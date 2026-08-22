@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "Core/Interfaces/InventoryInterface.h"
 #include "GameFramework/Pawn.h"
 #include "SaveGame/SaveableInterface.h"
 #include "RTS_BaseUnit.generated.h"
@@ -10,8 +9,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUnit, Log, All);
 
 UCLASS()
 class RTS_API ARTS_BaseUnit : public APawn,
-                              public ISaveableInterface,
-                              public IInventoryInterface
+                              public ISaveableInterface
 {
 	GENERATED_BODY()
 
@@ -21,6 +19,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
 	TObjectPtr<class UFloatingPawnMovement> PawnMovement = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Components)
+	TObjectPtr<class UInventoryComponent> InventoryComponent = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, Category = AI)
 	TSoftObjectPtr<class UBehaviorTree> BehaviorTreeAsset;
@@ -70,25 +71,4 @@ private:
 
 	UPROPERTY()
 	FTimerHandle _idleNotificationTimer;
-
-	//============== Inventory =====================
-	UPROPERTY(SaveGame)
-	TMap<TSubclassOf<class AItemActor>, uint8> _inventory;
-	UPROPERTY(SaveGame)
-	uint8 _currentItemsCount = 0;
-
-protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Inventory)
-	uint8 MaxInventoryCapacity = UINT8_MAX;
-
-public:
-	UFUNCTION()
-	virtual bool TryAddItem(const TSubclassOf<class AItemActor>& InItem) override;
-	UFUNCTION()
-	virtual uint8 GetAvailableCapacity() const override { return MaxInventoryCapacity - _currentItemsCount; }
-
-	UFUNCTION()
-	virtual uint8 GetItem(const TSubclassOf<class AItemActor>& InItem) const override;
-	UFUNCTION()
-	virtual void RemoveItem(const TSubclassOf<class AItemActor>& InItem, const uint8& Amount) override;
 };

@@ -1,9 +1,9 @@
 #include "Buildables/ConstructionProject.h"
 #include "AIController.h"
 #include "Buildables/BuildingData.h"
+#include "Components/InventoryComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/WidgetComponent.h"
-#include "Core/Interfaces/InventoryInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Managers/TasksManagerSubsystem.h"
@@ -149,7 +149,6 @@ void AConstructionProject::CreateBuildingTask()
 		building_task->TaskID = FGuid::NewGuid();
 		building_task->ActionName = FName("Building");
 		building_task->TaskLocation = GetActorLocation();
-		building_task->MaxJobSlots = 2;
 		building_task->WorkAmount = _buildingData.MaxDurability;
 
 		building_task->OnProgressChanged.BindUObject(this, &AConstructionProject::UpdateBuildingProgress);
@@ -181,7 +180,8 @@ void AConstructionProject::Handle_ResourceDelivered(UTask* Task, bool bSuccess, 
 		*pending = (*pending > collectTask->TargetAmount) ? *pending - collectTask->TargetAmount : 0;
 
 	if (bSuccess) {
-		if (IInventoryInterface* inventory = Cast<IInventoryInterface>(Task->GetExecutor()->GetPawn())) {
+		if (UInventoryComponent* inventory = Task->GetExecutor()->GetPawn()->GetComponentByClass<
+			UInventoryComponent>()) {
 			const uint8 required = _buildingData.RequiredResources.FindRef(itemType);
 			uint8 remaining = required;
 			if (const uint8* delivered = _deliveredResources.Find(itemType))

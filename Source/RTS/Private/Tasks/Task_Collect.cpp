@@ -1,11 +1,11 @@
 ﻿#include "Tasks/Task_Collect.h"
 #include "AIController.h"
-#include "Core/Interfaces/InventoryInterface.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "AI/RTS_BaseUnit.h"
 #include "Items/ItemActor.h"
+#include "Components/InventoryComponent.h"
 
 
 bool UTask_Collect::IsAvailableFor(const ARTS_BaseUnit* InUnit)
@@ -14,7 +14,7 @@ bool UTask_Collect::IsAvailableFor(const ARTS_BaseUnit* InUnit)
 		return false;
 
 	uint8 trim = TargetAmount;
-	if (const auto& inventory = Cast<IInventoryInterface>(InUnit))
+	if (const auto& inventory = InUnit->GetComponentByClass<UInventoryComponent>())
 		trim = FMath::Min(inventory->GetAvailableCapacity(), TargetAmount);
 	if (trim == 0) return false;
 
@@ -73,8 +73,8 @@ void UTask_Collect::OnItemReached(AActor* OverlappedActor, AActor* OtherActor)
 
 	target->OnActorBeginOverlap.RemoveAll(this);
 
-	if (IInventoryInterface* unitInventory = Cast<IInventoryInterface>(GetExecutor()->GetPawn())) {
-		if (!unitInventory->TryAddItem(target->GetClass())) {
+	if (const auto& inventory = GetExecutor()->GetPawn()->GetComponentByClass<UInventoryComponent>()) {
+		if (!inventory->TryAddItem(target->GetClass())) {
 			OnTaskFinished.Broadcast(this, false, FString("Failed to add item to inventory"));
 			return;
 		}

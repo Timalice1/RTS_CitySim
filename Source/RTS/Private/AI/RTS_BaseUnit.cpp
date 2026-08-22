@@ -3,6 +3,7 @@
 #include "NavigationSystem.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Components/InventoryComponent.h"
 #include "GameFramework/FloatingPawnMovement.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Managers/TasksManagerSubsystem.h"
@@ -29,6 +30,8 @@ ARTS_BaseUnit::ARTS_BaseUnit()
 
 	// Setup movement component
 	PawnMovement = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("PawnMovementComponent"));
+
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 void ARTS_BaseUnit::PossessedBy(AController* NewController)
@@ -45,7 +48,7 @@ void ARTS_BaseUnit::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	int i = 10;
-	for (const auto& item : _inventory) {
+	for (const auto& item : InventoryComponent->GetInventory()) {
 		UKismetSystemLibrary::DrawDebugString(
 			GetWorld(),
 			GetActorLocation() + FVector::UpVector * (300 + i),
@@ -112,34 +115,6 @@ class UBehaviorTree* ARTS_BaseUnit::GetDefaultBTAsset() const
 	if (BehaviorTreeAsset)
 		return BehaviorTreeAsset.LoadSynchronous();
 	return nullptr;
-}
-
-bool ARTS_BaseUnit::TryAddItem(const TSubclassOf<AItemActor>& InItem)
-{
-	if (_currentItemsCount < MaxInventoryCapacity) {
-		_inventory.FindOrAdd(InItem)++;
-		_currentItemsCount++;
-		return true;
-	}
-	return false;
-}
-
-uint8 ARTS_BaseUnit::GetItem(const TSubclassOf<AItemActor>& InItem) const
-{
-	if (const uint8* _items = _inventory.Find(InItem))
-		return *_items;
-	return 0;
-}
-
-void ARTS_BaseUnit::RemoveItem(const TSubclassOf<AItemActor>& InItem, const uint8& Amount)
-{
-	if (const uint8* _items = _inventory.Find(InItem)) {
-		if (*_items == Amount)
-			_inventory.Remove(InItem);
-		else
-			_inventory[InItem] = *_items - Amount;
-		_currentItemsCount -= Amount;
-	}
 }
 
 void ARTS_BaseUnit::LoadObjectData(FArchive& Ar)
