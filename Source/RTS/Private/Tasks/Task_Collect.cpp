@@ -1,11 +1,11 @@
 ﻿#include "Tasks/Task_Collect.h"
 #include "AIController.h"
 #include "GameFramework/Actor.h"
-#include "Kismet/GameplayStatics.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "AI/RTS_BaseUnit.h"
 #include "Items/ItemActor.h"
 #include "Components/InventoryComponent.h"
+#include "Managers/RecoursesManagerSubsystem.h"
 
 
 bool UTask_Collect::IsAvailableFor(const ARTS_BaseUnit* InUnit)
@@ -13,89 +13,103 @@ bool UTask_Collect::IsAvailableFor(const ARTS_BaseUnit* InUnit)
 	if (!Super::IsAvailableFor(InUnit) || !TargetItemType || TargetAmount == 0)
 		return false;
 
-	uint8 trim = TargetAmount;
+	int trim = TargetAmount;
 	if (const auto& inventory = InUnit->GetComponentByClass<UInventoryComponent>())
 		trim = FMath::Min(inventory->GetAvailableCapacity(), TargetAmount);
 	if (trim == 0) return false;
 
-	// TODO: Add ResourcesManager world subsystem, instead of iterating through all actors of type each time
-	TArray<AActor*> outActors;
-	UGameplayStatics::GetAllActorsOfClass(GetWorld(), TargetItemType, outActors);
-	if (outActors.Num() < TargetAmount)
-		return false;
+	URecoursesManagerSubsystem* recoursesManager = GetWorld()->GetSubsystem<URecoursesManagerSubsystem>();
+	if (!recoursesManager) return false;
 
-	for (AActor* actor : outActors) {
-		AItemActor* item = Cast<AItemActor>(actor);
-		if (IsValid(item) && !item->IsReserved() && InUnit->IsPointReachable(item->GetActorLocation()))
-			_targetItems.Add(item);
-	}
+	TArray<FItemSearchResult> result = recoursesManager->FindItemsByType(TargetItemType);
+	if (result.IsEmpty()) return false;
 
-	const FVector unitLocation = InUnit->GetActorLocation();
-	_targetItems.Sort([&unitLocation](const AActor& A, const AActor& B)
+	// Filter out unreachable sources
+	result.RemoveAll([&InUnit](const FItemSearchResult& Source)
 	{
-		const float targetA = FVector::DistSquared(A.GetActorLocation(), unitLocation);
-		const float targetB = FVector::DistSquared(B.GetActorLocation(), unitLocation);
-		return targetA < targetB;
+		return !InUnit->IsPointReachable(Source.GetLocation());
 	});
 
-	if (_targetItems.Num() > trim)
-		_targetItems.SetNum(trim);
+	// Sort by source priority and distance. Loose items first, storage as a fallback.
+	const FVector unitLocation = InUnit->GetActorLocation();
+	result.Sort([&unitLocation](const FItemSearchResult& A, const FItemSearchResult& B)
+	{
+		const int priorityA = A.ItemActor ? 0 : 1; // 0 for placed item, 1 for storage
+		const int priorityB = B.ItemActor ? 0 : 1;
 
-	if (_targetItems.IsEmpty()) return false;
+		if (priorityA != priorityB)
+			return priorityA < priorityB;
+		return FVector::DistSquared(A.GetLocation(), unitLocation) <
+			FVector::DistSquared(B.GetLocation(), unitLocation);
+	});
 
-	return true;
+	int accumulated = 0;
+	for (FItemSearchResult source : result) {
+		if (accumulated >= trim) break;
+
+		const int stillNeed = trim - accumulated;
+		source.Requested = FMath::Min(stillNeed, source.Quantity);
+		accumulated += source.Requested;
+
+		_targetSources.Add(source);
+	}
+
+	return !_targetSources.IsEmpty();
 }
 
 void UTask_Collect::Execute_Implementation(class AAIController* Executor)
 {
 	Super::Execute_Implementation(Executor);
 
-	for (AItemActor* target : _targetItems)
-		target->TryReserve();
-	MoveToItem();
-}
-
-void UTask_Collect::MoveToItem()
-{
-	if (AActor* target = _targetItems[0]) {
-		GetExecutor()->MoveToActor(target);
-		target->OnActorBeginOverlap.AddDynamic(this, &ThisClass::OnItemReached);
+	for (FItemSearchResult source : _targetSources) {
+		if (source.ItemActor)
+			source.ItemActor->TryReserve();
+		if (source.Storage) {
+			// TODO: Reserve a required amount of items in storage. See a InventoryComponent
+			// NOTE: Waits for a storage implementation
+		}
 	}
+	_currentSource = 0;
+	GetExecutor()->ReceiveMoveCompleted.AddDynamic(this, &ThisClass::OnMoveComplete);
+	MoveToSource();
 }
 
-void UTask_Collect::OnItemReached(AActor* OverlappedActor, AActor* OtherActor)
+void UTask_Collect::MoveToSource()
 {
-	if (!GetExecutor() || OtherActor != GetExecutor()->GetPawn())
-		return;
-	AItemActor* target = Cast<AItemActor>(OverlappedActor);
-	if (!target)
-		return;
+	GetExecutor()->MoveToLocation(_targetSources[_currentSource].GetLocation());
+}
 
-	target->OnActorBeginOverlap.RemoveAll(this);
+void UTask_Collect::OnMoveComplete(FAIRequestID RequestID, EPathFollowingResult::Type Result)
+{
+	if (_targetSources.IsValidIndex(_currentSource)) {
+		const FItemSearchResult source = _targetSources[_currentSource];
+		UInventoryComponent* unitInventory = GetExecutor()->GetPawn()->GetComponentByClass<UInventoryComponent>();
 
-	if (const auto& inventory = GetExecutor()->GetPawn()->GetComponentByClass<UInventoryComponent>()) {
-		if (!inventory->TryAddItem(target->GetClass())) {
-			OnTaskFinished.Broadcast(this, false, FString("Failed to add item to inventory"));
-			return;
+		if (source.ItemActor) {
+			AItemActor* target = source.ItemActor;
+			if (unitInventory->TryAddItem(TargetItemType))
+				target->PickUp();
 		}
 
-		_targetItems.Remove(target);
-		target->PickUp();
-
-		if (!_targetItems.IsEmpty()) {
-			MoveToItem();
-			return;
+		if (source.Storage) {
+			const int removed = source.Storage->RemoveItem(TargetItemType, source.Requested);
+			for (int i = 0; i < removed; i++)
+				unitInventory->TryAddItem(TargetItemType);
 		}
 
-		// Carry collected items to the target location
+		_currentSource++;
+		if (_targetSources.IsValidIndex(_currentSource)) {
+			MoveToSource();
+			return;
+		}
 		GetExecutor()->MoveToLocation(TaskLocation);
-		GetExecutor()->GetPathFollowingComponent()->OnRequestFinished.AddUObject(this, &ThisClass::OnTargetReached);
+		return;
 	}
+	FinishTask(true, TEXT("Task finished"));
 }
 
-void UTask_Collect::OnTargetReached(FAIRequestID FaiRequestID, const FPathFollowingResult& PathFollowingResult)
+void UTask_Collect::FinishTask(const bool Success, const FString& message)
 {
-	GetExecutor()->GetPathFollowingComponent()->OnRequestFinished.RemoveAll(this);
-	if (PathFollowingResult.IsSuccess())
-		OnTaskFinished.Broadcast(this, true, FString("Task finished"));
+	GetExecutor()->ReceiveMoveCompleted.RemoveDynamic(this, &ThisClass::OnMoveComplete);
+	OnTaskFinished.Broadcast(this, Success, message);
 }

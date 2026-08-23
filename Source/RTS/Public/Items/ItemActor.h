@@ -19,15 +19,18 @@ protected:
 public:
 	AItemActor();
 
-	UFUNCTION()
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	virtual void PickUp();
 
-	UFUNCTION()
 	virtual bool TryReserve();
 
-	UFUNCTION()
 	virtual bool IsReserved() const { return bReserved; }
 
 private:
 	bool bReserved = false;
+
+	UPROPERTY()
+	TObjectPtr<class URecoursesManagerSubsystem> _recoursesManager;
 };

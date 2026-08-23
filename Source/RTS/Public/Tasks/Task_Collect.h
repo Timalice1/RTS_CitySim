@@ -16,7 +16,7 @@ public:
 	TSubclassOf<class AItemActor> TargetItemType;
 
 	UPROPERTY()
-	uint8 TargetAmount;
+	int TargetAmount;
 
 private:
 	UFUNCTION()
@@ -24,13 +24,14 @@ private:
 
 	virtual bool IsAvailableFor(const class ARTS_BaseUnit* InUnit) override;
 
-	UFUNCTION()
-	virtual void MoveToItem();
+	virtual void MoveToSource();
 
 	UFUNCTION()
-	void OnItemReached(AActor* OverlappedActor, AActor* OtherActor);
-	void OnTargetReached(FAIRequestID FaiRequestID, const FPathFollowingResult& PathFollowingResult);
+	void OnMoveComplete(FAIRequestID RequestID, EPathFollowingResult::Type Result);
+
+	virtual void FinishTask(const bool Success, const FString& message);
 
 	UPROPERTY()
-	TArray<class AItemActor*> _targetItems;
+	TArray<struct FItemSearchResult> _targetSources;
+	int _currentSource = 0;
 };

@@ -18,25 +18,35 @@ public:
 	virtual bool TryAddItem(const TSubclassOf<AItemActor>& InItem);
 
 	UFUNCTION()
-	virtual void RemoveItem(const TSubclassOf<AItemActor>& InItem, const uint8& Amount);
+	virtual int RemoveItem(const TSubclassOf<AItemActor>& InItem, const int& Amount);
 
 	UFUNCTION()
-	virtual uint8 GetItem(const TSubclassOf<AItemActor>& InItem);
+	virtual int GetItem(const TSubclassOf<AItemActor>& InItem);
 
 	UFUNCTION()
-	virtual uint8 GetAvailableCapacity();
+	virtual int GetAvailableCapacity();
 
 	UFUNCTION()
-	virtual TMap<TSubclassOf<AItemActor>, uint8> GetInventory() { return _inventory; }
+	virtual TMap<TSubclassOf<AItemActor>, int> GetInventory() { return _inventory; }
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = InventoryComponent)
-	uint8 MaxCapacity = UINT8_MAX;
+	int MaxCapacity = 100;
+
+	/*
+	 * TODO: For a storage inventory
+	 *  allowed items list
+	 *  reserved items list  (if two units gonna need the same item)
+	 *  ReserveItems(ItemType, Amount)
+	 *  ReleaseReserved
+	 *  GetAvailable -> Num of non-reserved items 
+	 *  CanAcceptItem? -> check for allowed items list
+	 */
 
 private:
 	UPROPERTY(SaveGame)
-	uint8 _currentItemsCount = 0;
+	int _currentItemsCount = 0;
 
 	UPROPERTY(SaveGame)
-	TMap<TSubclassOf<AItemActor>, uint8> _inventory;
+	TMap<TSubclassOf<AItemActor>, int> _inventory;
 };

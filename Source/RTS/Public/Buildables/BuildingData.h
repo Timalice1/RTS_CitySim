@@ -37,7 +37,7 @@ struct FBuildingData : public FTableRowBase
 	float BuildingProgressionSpeed = .1f;
 
 	UPROPERTY(SaveGame, EditDefaultsOnly, BlueprintReadOnly, Category = BuildingConfig)
-	TMap<TSubclassOf<class AItemActor>, uint8> RequiredResources;
+	TMap<TSubclassOf<class AItemActor>, int> RequiredResources;
 
 	// Cell size of the world grid. Set during building initialization
 	UPROPERTY(SaveGame)

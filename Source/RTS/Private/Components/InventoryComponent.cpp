@@ -16,25 +16,28 @@ bool UInventoryComponent::TryAddItem(const TSubclassOf<AItemActor>& InItem)
 	return true;
 }
 
-void UInventoryComponent::RemoveItem(const TSubclassOf<AItemActor>& InItem, const uint8& Amount)
+int UInventoryComponent::RemoveItem(const TSubclassOf<AItemActor>& InItem, const int& Amount)
 {
-	if (const uint8* current = _inventory.Find(InItem)) {
-		if (*current == Amount)
+	int toRemove = 0;
+	if (const int* current = _inventory.Find(InItem)) {
+		toRemove = FMath::Min(*current, Amount);
+		if (toRemove == *current)
 			_inventory.Remove(InItem);
 		else
-			_inventory[InItem] = *current - Amount;
-		_currentItemsCount -= Amount;
+			_inventory[InItem] -= toRemove;
+		_currentItemsCount -= toRemove;
 	}
+	return toRemove;
 }
 
-uint8 UInventoryComponent::GetItem(const TSubclassOf<AItemActor>& InItem)
+int UInventoryComponent::GetItem(const TSubclassOf<AItemActor>& InItem)
 {
-	if (const uint8* current = _inventory.Find(InItem))
+	if (const int* current = _inventory.Find(InItem))
 		return *current;
 	return 0;
 }
 
-uint8 UInventoryComponent::GetAvailableCapacity()
+int UInventoryComponent::GetAvailableCapacity()
 {
 	return MaxCapacity - _currentItemsCount;
 }

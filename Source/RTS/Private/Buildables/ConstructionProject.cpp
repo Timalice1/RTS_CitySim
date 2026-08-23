@@ -111,22 +111,22 @@ void AConstructionProject::EvaluateState()
 	}
 
 	for (const auto& required : _buildingData.RequiredResources) {
-		uint8 have = 0;
+		int have = 0;
 
-		if (const uint8* delivered = _deliveredResources.Find(required.Key)) have += *delivered;
-		if (const uint8* pending = _pendingResources.Find(required.Key)) have += *pending;
+		if (const int* delivered = _deliveredResources.Find(required.Key)) have += *delivered;
+		if (const int* pending = _pendingResources.Find(required.Key)) have += *pending;
 
 		// TODO: FMath::CeilToInt(remaining / inventory capacity) -> tasks amount to create
 		// TODO: limit tasks amount to available units count (optional)
 
-		const uint8 target = required.Value;
+		const int target = required.Value;
 		if (have < target)
 			CreateDeliveryTask(required.Key, target - have);
 	}
 }
 
 void AConstructionProject::CreateDeliveryTask(const TSubclassOf<class AItemActor> InItemType,
-                                              const uint8 InTargetAmount)
+                                              const int InTargetAmount)
 {
 	if (UTask_Collect* collectTask = NewObject<UTask_Collect>()) {
 		collectTask->TaskID = FGuid::NewGuid();
@@ -162,7 +162,7 @@ bool AConstructionProject::CheckResources() const
 	if (_deliveredResources.Num() != _buildingData.RequiredResources.Num())
 		return false;
 	for (const auto& target : _buildingData.RequiredResources) {
-		const uint8* delivered = _deliveredResources.Find(target.Key);
+		const int* delivered = _deliveredResources.Find(target.Key);
 		if (!delivered || *delivered < target.Value)
 			return false;
 	}
@@ -176,18 +176,18 @@ void AConstructionProject::Handle_ResourceDelivered(UTask* Task, bool bSuccess, 
 
 	const TSubclassOf<AItemActor> itemType = collectTask->TargetItemType;
 
-	if (uint8* pending = _pendingResources.Find(itemType))
+	if (int* pending = _pendingResources.Find(itemType))
 		*pending = (*pending > collectTask->TargetAmount) ? *pending - collectTask->TargetAmount : 0;
 
 	if (bSuccess) {
 		if (UInventoryComponent* inventory = Task->GetExecutor()->GetPawn()->GetComponentByClass<
 			UInventoryComponent>()) {
-			const uint8 required = _buildingData.RequiredResources.FindRef(itemType);
-			uint8 remaining = required;
-			if (const uint8* delivered = _deliveredResources.Find(itemType))
+			const int required = _buildingData.RequiredResources.FindRef(itemType);
+			int remaining = required;
+			if (const int* delivered = _deliveredResources.Find(itemType))
 				remaining -= FMath::Min(*delivered, required); // in case if delivered > required
 
-			const uint8 toTake = FMath::Min(inventory->GetItem(itemType), remaining);
+			const int toTake = FMath::Min(inventory->GetItem(itemType), remaining);
 			_deliveredResources.FindOrAdd(itemType) += toTake;
 			inventory->RemoveItem(itemType, toTake);
 		}
